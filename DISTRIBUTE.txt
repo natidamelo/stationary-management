@@ -1,0 +1,42 @@
+========================================
+HOW TO SEND THIS PROJECT TO CUSTOMERS
+========================================
+
+BEFORE ZIPPING - DELETE these folders (to reduce size):
+-------------------------------------------------------
+  backend/node_modules
+  frontend/node_modules
+
+OPTIONAL - also exclude (if present):
+  backend/dist
+  frontend/dist
+  .git
+
+TO CREATE THE ZIP:
+------------------
+1. Delete backend/node_modules and frontend/node_modules
+2. Right-click the project folder
+3. Send to → Compressed (zipped) folder
+4. Name it: Stationery-Management.zip
+
+HOW TO SEND:
+------------
+- USB drive
+- Google Drive / Dropbox / OneDrive (share download link)
+- WeTransfer.com
+- Email (if under 25MB)
+
+CUSTOMER INSTRUCTIONS:
+----------------------
+Tell customers to read INSTALL.txt after extracting the ZIP.
+
+AFTER CUSTOMER INSTALLS:
+------------------------
+1. Customer opens http://localhost:5173
+2. Customer copies "Computer ID" from login page
+3. Customer sends you the Computer ID
+4. You: Log in as admin → Customers → Add Customer
+5. You: Licenses → Generate License → Paste their Computer ID
+6. Customer can now log in (license activated)
+
+========================================

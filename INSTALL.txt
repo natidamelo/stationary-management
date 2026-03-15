@@ -1,0 +1,47 @@
+========================================
+STATIONERY MANAGEMENT SYSTEM - INSTALLATION
+========================================
+
+PREREQUISITES (install these first):
+------------------------------------
+1. Node.js (LTS) - https://nodejs.org
+2. MongoDB Community - https://www.mongodb.com/try/download/community
+
+INSTALLATION STEPS:
+-------------------
+1. Extract this project folder (e.g. to C:\Stationery-Management)
+
+2. Create backend/.env file:
+   - Copy backend/.env.example to backend/.env
+   - Edit .env and set:
+     MONGODB_URI=mongodb://localhost:27017/stationery_management
+     JWT_SECRET=change-this-to-a-secure-secret
+
+3. Open Command Prompt / PowerShell and run:
+
+   For BACKEND:
+   ------------
+   cd backend
+   npm install --legacy-peer-deps
+   npm run start:dev
+   
+   (Keep this window open - backend must keep running)
+
+4. Open a NEW Command Prompt / PowerShell:
+
+   For FRONTEND:
+   -------------
+   cd frontend
+   npm install
+   npm run dev
+
+5. Open your browser and go to: http://localhost:5173
+
+6. On the login page, find "Computer ID" and copy it.
+   Send this Computer ID to the vendor to activate your license.
+
+7. Default admin login (created on first run):
+   Email: admin@example.com
+   Password: Admin@123
+
+========================================

@@ -86,7 +86,7 @@ export default function StockManagement() {
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   
   // Distribution data
-  const [distributions, setDists] = useState<Distribution[]>([]);
+  const [distributions, setDistributions] = useState<Distribution[]>([]);
   const [users, setUsers] = useState<Array<{ id: string; fullName: string }>>([]);
   
   // Filters
@@ -186,7 +186,7 @@ export default function StockManagement() {
     try {
       setLoading(true);
       setError(null);
-      const [lowStockRes, movementsRes, distributionsRes, itemsRes, usersRes, categoriesRes] = await Promise.all([
+      const [lowStockRes, movementsRes, distributionsRes, itemsRes, usersRes, categoriesRes] = await Promise.allSettled([
         api.get<LowStock[]>('/inventory/low-stock'),
         api.get<Movement[]>('/inventory/movements?limit=50'),
         api.get<Distribution[]>('/distribution'),
@@ -195,16 +195,31 @@ export default function StockManagement() {
         api.get<Array<{ id: string; name: string }>>('/categories'),
       ]);
 
-      setLowStock(lowStockRes.data);
-      setMovements(movementsRes.data);
-      setDists(distributionsRes.data);
-      setItems(itemsRes.data);
-      setUsers(usersRes.data);
-      setCategories(categoriesRes.data);
+      const lowStockData: LowStock[] = lowStockRes.status === 'fulfilled' ? lowStockRes.value.data : [];
+      const movementsData: Movement[] = movementsRes.status === 'fulfilled' ? movementsRes.value.data : [];
+      const distributionsData: Distribution[] = distributionsRes.status === 'fulfilled' ? distributionsRes.value.data : [];
+      const itemsData: any[] = itemsRes.status === 'fulfilled' ? itemsRes.value.data : [];
+      const usersData: Array<{ id: string; fullName: string }> = usersRes.status === 'fulfilled' ? usersRes.value.data : [];
+      const categoriesData: Array<{ id: string; name: string }> = categoriesRes.status === 'fulfilled' ? categoriesRes.value.data : [];
+
+      // Log any failures to help debug
+      if (lowStockRes.status === 'rejected') console.warn('low-stock failed:', lowStockRes.reason);
+      if (movementsRes.status === 'rejected') console.warn('movements failed:', movementsRes.reason);
+      if (distributionsRes.status === 'rejected') console.warn('distribution failed:', distributionsRes.reason);
+      if (itemsRes.status === 'rejected') console.error('items failed:', itemsRes.reason);
+      if (usersRes.status === 'rejected') console.warn('users failed:', usersRes.reason);
+      if (categoriesRes.status === 'rejected') console.warn('categories failed:', categoriesRes.reason);
+
+      setLowStock(lowStockData);
+      setMovements(movementsData);
+      setDistributions(distributionsData);
+      setItems(itemsData);
+      setUsers(usersData);
+      setCategories(categoriesData);
 
       // Create stock items with balances from movements (API returns types in lowercase: 'purchase', 'sale', etc.)
       const stockBalances: Record<string, number> = {};
-      movementsRes.data.forEach((m) => {
+      movementsData.forEach((m) => {
         if (m.item) {
           const itemId = (m.item as any).id || m.item.sku;
           if (!stockBalances[itemId]) stockBalances[itemId] = 0;
@@ -218,7 +233,7 @@ export default function StockManagement() {
       });
       // Override with balanceAfter from the latest movement per item (movements are sorted newest first)
       const seenItemsForBalance = new Set<string>();
-      movementsRes.data.forEach((m) => {
+      movementsData.forEach((m) => {
         if (m.item && m.balanceAfter !== undefined) {
           const itemId = (m.item as any).id || m.item.sku;
           if (itemId && !seenItemsForBalance.has(itemId)) {
@@ -229,11 +244,11 @@ export default function StockManagement() {
       });
 
       // Merge with low stock data which has accurate currentStock
-      lowStockRes.data.forEach((ls) => {
+      lowStockData.forEach((ls) => {
         stockBalances[ls.id] = ls.currentStock;
       });
 
-      const stockItemsWithBalance: StockItem[] = itemsRes.data.map((item) => {
+      const stockItemsWithBalance: StockItem[] = itemsData.map((item) => {
         const costPrice = Number(item.costPrice ?? item.price ?? 0);
         const sellPrice = Number(item.price ?? (costPrice * 1.5));
         const currentStock = stockBalances[item.id] || 0;
@@ -258,10 +273,10 @@ export default function StockManagement() {
       }
 
       // Calculate summary
-      const totalItems = itemsRes.data.length;
-      const lowStockCount = lowStockRes.data.length;
-      const recentDistributions = distributionsRes.data.slice(0, 7).length;
-      const recentMovements = movementsRes.data.length;
+      const totalItems = itemsData.length;
+      const lowStockCount = lowStockData.length;
+      const recentDistributions = distributionsData.slice(0, 7).length;
+      const recentMovements = movementsData.length;
       const totalStockValue = stockItemsWithBalance.reduce((sum, item) => sum + (item.currentStock * item.sellPrice), 0);
 
       setSummary({

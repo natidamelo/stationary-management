@@ -60,7 +60,7 @@ export class ItemsService {
   }
 
   async findAll(filters?: { categoryId?: string; search?: string }) {
-    const q: any = {};
+    const q: any = { isActive: { $ne: false } };
     
     if (filters?.categoryId && Types.ObjectId.isValid(filters.categoryId)) {
       q.categoryId = new Types.ObjectId(filters.categoryId);

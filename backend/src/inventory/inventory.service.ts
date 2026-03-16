@@ -115,12 +115,17 @@ export class InventoryService {
     const items = await this.itemModel.find({ isActive: true }).populate('categoryId').lean();
     const balances = await this.getBalancesForItems(items.map((i: any) => i._id.toString()));
     return items
-      .filter((i: any) => balances[i._id.toString()] <= Number(i.reorderLevel))
+      .filter((i: any) => {
+        const stock = balances[i._id.toString()];
+        const level = Number(i.reorderLevel);
+        // Only flag as low stock if reorderLevel > 0 AND current stock is below it
+        return level > 0 && stock < level;
+      })
       .map((i: any) => ({
         id: i._id.toString(),
         sku: i.sku,
         name: i.name,
-        category: i.categoryId?.name,
+        category: i.categoryId ? { name: i.categoryId.name } : undefined,
         unit: i.unit,
         reorderLevel: Number(i.reorderLevel),
         currentStock: balances[i._id.toString()],

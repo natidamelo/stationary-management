@@ -300,40 +300,58 @@ export default function StockManagement() {
 
   const runAdjustment = async () => {
     if (!adjustForm.itemId || adjustForm.quantity === 0) return;
-    await api.post('/inventory/adjustment', adjustForm);
-    setAdjustModal(false);
-    setAdjustForm({ itemId: '', quantity: 0, notes: '' });
-    loadData();
+    try {
+      await api.post('/inventory/adjustment', adjustForm);
+      setAdjustModal(false);
+      setAdjustForm({ itemId: '', quantity: 0, notes: '' });
+      loadData();
+    } catch (e: any) {
+      console.error('Failed to adjust stock:', e);
+      const msg = e.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to adjust stock.'));
+    }
   };
 
   const issueItems = async () => {
     const lines = issueForm.lines.filter((l) => l.itemId && l.quantity > 0);
     if (!lines.length) return;
-    await api.post('/distribution/issue', {
-      issuedToUserId: issueForm.issuedToUserId || undefined,
-      department: issueForm.department || undefined,
-      notes: issueForm.notes || undefined,
-      lines,
-    });
-    setIssueModal(false);
-    setIssueForm({ issuedToUserId: '', department: '', notes: '', lines: [{ itemId: '', quantity: 1 }] });
-    loadData();
+    try {
+      await api.post('/distribution/issue', {
+        issuedToUserId: issueForm.issuedToUserId || undefined,
+        department: issueForm.department || undefined,
+        notes: issueForm.notes || undefined,
+        lines,
+      });
+      setIssueModal(false);
+      setIssueForm({ issuedToUserId: '', department: '', notes: '', lines: [{ itemId: '', quantity: 1 }] });
+      loadData();
+    } catch (e: any) {
+      console.error('Failed to issue items:', e);
+      const msg = e.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to issue items.'));
+    }
   };
 
-      const saveItem = async () => {
+  const saveItem = async () => {
     if (!itemForm.sku || !itemForm.name) return;
-    const payload = {
-      ...itemForm,
-      categoryId: itemForm.categoryId || undefined,
-      reorderLevel: Number(itemForm.reorderLevel),
-      costPrice: Number(itemForm.price),
-      price: Number(itemForm.sellPrice),
-      barcode: itemForm.barcode || itemForm.sku, // Use SKU as fallback if barcode not provided
-    };
-    await api.post('/items', payload);
-    setAddItemModal(false);
-    setItemForm({ sku: '', name: '', categoryId: '', unit: 'unit', reorderLevel: 0, price: 0, sellPrice: 0, barcode: '' });
-    loadData();
+    try {
+      const payload = {
+        ...itemForm,
+        categoryId: itemForm.categoryId || undefined,
+        reorderLevel: Number(itemForm.reorderLevel),
+        costPrice: Number(itemForm.price),
+        price: Number(itemForm.sellPrice),
+        barcode: itemForm.barcode || itemForm.sku, // Use SKU as fallback if barcode not provided
+      };
+      await api.post('/items', payload);
+      setAddItemModal(false);
+      setItemForm({ sku: '', name: '', categoryId: '', unit: 'unit', reorderLevel: 0, price: 0, sellPrice: 0, barcode: '' });
+      loadData();
+    } catch (e: any) {
+      console.error('Failed to save item:', e);
+      const msg = e.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to save item. The SKU or Barcode might already exist.'));
+    }
   };
 
   const handleEditStock = (item: StockItem) => {
@@ -350,29 +368,35 @@ export default function StockManagement() {
   const handleEditStockSubmit = async () => {
     if (!editStockForm.itemId) return;
     
-    // Update item: costPrice for COGS, price = selling price, reorderLevel
-    await api.put(`/items/${editStockForm.itemId}`, {
-      costPrice: editStockForm.costPrice,
-      price: editStockForm.sellPrice,
-      reorderLevel: editStockForm.reorderLevel,
-    });
+    try {
+      // Update item: costPrice for COGS, price = selling price, reorderLevel
+      await api.put(`/items/${editStockForm.itemId}`, {
+        costPrice: editStockForm.costPrice,
+        price: editStockForm.sellPrice,
+        reorderLevel: editStockForm.reorderLevel,
+      });
 
-    // Adjust stock quantity if changed
-    const currentItem = stockItems.find(i => i.id === editStockForm.itemId);
-    if (currentItem && editStockForm.quantity !== currentItem.currentStock) {
-      const quantityDiff = editStockForm.quantity - currentItem.currentStock;
-      if (quantityDiff !== 0) {
-        await api.post('/inventory/adjustment', {
-          itemId: editStockForm.itemId,
-          quantity: quantityDiff,
-          notes: `Stock updated via edit - ${quantityDiff > 0 ? 'added' : 'removed'} ${Math.abs(quantityDiff)} units`,
-        });
+      // Adjust stock quantity if changed
+      const currentItem = stockItems.find(i => i.id === editStockForm.itemId);
+      if (currentItem && editStockForm.quantity !== currentItem.currentStock) {
+        const quantityDiff = editStockForm.quantity - currentItem.currentStock;
+        if (quantityDiff !== 0) {
+          await api.post('/inventory/adjustment', {
+            itemId: editStockForm.itemId,
+            quantity: quantityDiff,
+            notes: `Stock updated via edit - ${quantityDiff > 0 ? 'added' : 'removed'} ${Math.abs(quantityDiff)} units`,
+          });
+        }
       }
-    }
 
-    setEditStockModal(false);
-    setEditStockForm({ itemId: '', quantity: 0, costPrice: 0, sellPrice: 0, reorderLevel: 0 });
-    loadData();
+      setEditStockModal(false);
+      setEditStockForm({ itemId: '', quantity: 0, costPrice: 0, sellPrice: 0, reorderLevel: 0 });
+      loadData();
+    } catch (e: any) {
+      console.error('Failed to update stock:', e);
+      const msg = e.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to update stock.'));
+    }
   };
 
   if (loading) {

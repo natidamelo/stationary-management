@@ -286,17 +286,17 @@ export default function Dashboard() {
               <ToggleButton value="year">Year</ToggleButton>
             </ToggleButtonGroup>
           </Box>
-          <Box sx={{ height: 280, width: '100%', minWidth: 0 }}>
+          <Box sx={{ width: '100%', minWidth: 0 }}>
             {salesChartLoading ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 280 }}>
                 <CircularProgress size={36} thickness={4} sx={{ color: '#4f46e5' }} />
               </Box>
             ) : salesChartData.length === 0 ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'text.secondary' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 280, color: 'text.secondary' }}>
                 <Typography variant="body2">No sales data for this period.</Typography>
               </Box>
             ) : (
-              <ResponsiveContainer width="100%" height="100%" minHeight={1}>
+              <ResponsiveContainer width="100%" height={280} minHeight={1}>
                 <AreaChart data={salesChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">

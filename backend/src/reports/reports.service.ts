@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { ItemDocument } from '../schemas/item.schema';
 import { StockMovementDocument } from '../schemas/stock-movement.schema';
 import { SaleDocument } from '../schemas/sale.schema';
@@ -13,6 +13,7 @@ import { OperatingExpenseDocument } from '../schemas/operating-expense.schema';
 import { ServiceDocument } from '../schemas/service.schema';
 import { InventoryService } from '../inventory/inventory.service';
 import { StockMovementType } from '../common/enums';
+import { toObjectId } from '../common/utils';
 
 @Injectable()
 export class ReportsService {
@@ -41,7 +42,8 @@ export class ReportsService {
   ) {}
 
   async stockReport(tenantId: string) {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
     const items = await this.itemModel.find({ tenantId: tid, isActive: true }).populate('categoryId').sort({ name: 1 }).lean();
     const balances = await this.inventory.getBalancesForItems(items.map((i: any) => i._id.toString()), tenantId);
     return items.map((i: any) => ({
@@ -84,8 +86,9 @@ export class ReportsService {
   }
 
   async stockReportByPeriod(tenantId: string, period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly') {
+    const tid = toObjectId(tenantId);
+    if (!tid) return null;
     const { start, end } = this.getPeriodDates(period);
-    const tid = new Types.ObjectId(tenantId);
     const movements = await this.movementModel
       .find({ tenantId: tid, createdAt: { $gte: start, $lte: end } })
       .populate('itemId')
@@ -126,8 +129,9 @@ export class ReportsService {
   }
 
   async financialSummary(tenantId: string, period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly') {
+    const tid = toObjectId(tenantId);
+    if (!tid) return null;
     const { start, end } = this.getPeriodDates(period);
-    const tid = new Types.ObjectId(tenantId);
     const [sales, posReceived] = await Promise.all([
       this.saleModel.find({ tenantId: tid, soldAt: { $gte: start, $lte: end } }).lean(),
       this.poModel.find({ tenantId: tid, status: 'received', orderDate: { $gte: start, $lte: end } }).populate('lines').lean(),
@@ -151,8 +155,9 @@ export class ReportsService {
   }
 
   async salesReport(tenantId: string, period: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly') {
+    const tid = toObjectId(tenantId);
+    if (!tid) return null;
     const { start, end } = this.getPeriodDates(period);
-    const tid = new Types.ObjectId(tenantId);
     const sales = await this.saleModel
       .find({ tenantId: tid, soldAt: { $gte: start, $lte: end } })
       .populate('soldById')
@@ -202,9 +207,10 @@ export class ReportsService {
   }
 
   async businessOverview(tenantId: string, period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' = 'monthly') {
+    const tid = toObjectId(tenantId);
+    if (!tid) return null;
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const tid = new Types.ObjectId(tenantId);
     const [itemCount, categoryCount, supplierCount, userCount, recentSalesCount, recentDistCount, lowStockItems, revenueTrend] =
       await Promise.all([
         this.itemModel.countDocuments({ tenantId: tid, isActive: true }),
@@ -229,7 +235,8 @@ export class ReportsService {
   }
 
   private async getRevenueTrend(tenantId: string, period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'): Promise<Array<{ label: string; revenue: number; date: string }>> {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
     if (period === 'quarterly') {
       return this.getRevenueTrendByWeek(tenantId, 13);
     }
@@ -265,7 +272,8 @@ export class ReportsService {
   }
 
   private async getRevenueTrendByWeek(tenantId: string, weeks: number): Promise<Array<{ label: string; revenue: number; date: string }>> {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
     const start = new Date();
     start.setDate(start.getDate() - weeks * 7);
     start.setHours(0, 0, 0, 0);
@@ -313,7 +321,8 @@ export class ReportsService {
   }
 
   private async getRevenueTrendByMonth(tenantId: string, months: number): Promise<Array<{ label: string; revenue: number; date: string }>> {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
     const start = new Date();
     start.setMonth(start.getMonth() - months);
     start.setDate(1);
@@ -347,7 +356,8 @@ export class ReportsService {
   }
 
   async costProfitAnalysis(tenantId: string, period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly') {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) return null;
     const financial = await this.financialSummary(tenantId, period);
     const { start, end } = this.getPeriodDates(period);
     const [expenses, sales] = await Promise.all([
@@ -384,7 +394,7 @@ export class ReportsService {
       }
     }
     
-    const revenue = financial.revenue || 0;
+    const revenue = financial?.revenue || 0;
     itemCogs = Math.max(0, itemCogs);
     serviceCosts = Math.max(0, serviceCosts);
     const cogs = itemCogs + serviceCosts;
@@ -421,7 +431,8 @@ export class ReportsService {
   }
 
   async createOperatingExpense(tenantId: string, body: { date: string; description: string; amount: number; category?: string }) {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new Error('Tenant ID required');
     const doc = await this.operatingExpenseModel.create({
       date: new Date(body.date),
       description: body.description,
@@ -439,13 +450,16 @@ export class ReportsService {
   }
 
   async deleteOperatingExpense(id: string, tenantId: string) {
-    const tid = new Types.ObjectId(tenantId);
-    await this.operatingExpenseModel.deleteOne({ _id: new Types.ObjectId(id), tenantId: tid });
+    const tid = toObjectId(tenantId);
+    const eid = toObjectId(id);
+    if (!tid || !eid) return;
+    await this.operatingExpenseModel.deleteOne({ _id: eid, tenantId: tid });
   }
 
   async serviceAnalytics(tenantId: string, period: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly') {
+    const tid = toObjectId(tenantId);
+    if (!tid) return null;
     const { start, end } = this.getPeriodDates(period);
-    const tid = new Types.ObjectId(tenantId);
     const distributions = await this.distributionModel
       .find({ tenantId: tid, createdAt: { $gte: start, $lte: end } })
       .populate('issuedToUserId')
@@ -525,7 +539,8 @@ export class ReportsService {
     period: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly',
     start: Date,
   ): Promise<Array<{ label: string; count: number; date: string }>> {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
     if (period === 'yearly') {
       // Group by month for the last 12 months
       const pipeline = [

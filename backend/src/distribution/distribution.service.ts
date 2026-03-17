@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { DistributionDocument } from '../schemas/distribution.schema';
 import { StockMovementType } from '../common/enums';
 import { InventoryService } from '../inventory/inventory.service';
+import { toObjectId } from '../common/utils';
 
 @Injectable()
 export class DistributionService {
@@ -14,7 +15,9 @@ export class DistributionService {
   ) {}
 
   private async nextDistributionNumber(tenantId: string): Promise<string> {
-    const last = await this.model.findOne({ tenantId: new Types.ObjectId(tenantId) }).sort({ createdAt: -1 }).lean();
+    const tid = toObjectId(tenantId);
+    if (!tid) return `DIS-${Date.now()}`;
+    const last = await this.model.findOne({ tenantId: tid }).sort({ createdAt: -1 }).lean();
     const num = last ? parseInt(String(last.distributionNumber).replace(/\D/g, ''), 10) + 1 : 1;
     return `DIS-${String(num).padStart(6, '0')}`;
   }
@@ -46,15 +49,17 @@ export class DistributionService {
     body: { issuedToUserId?: string; department?: string; notes?: string; lines: { itemId: string; quantity: number }[] },
     user: { id: string; tenantId: string },
   ) {
-    const tid = new Types.ObjectId(user.tenantId);
+    const tid = toObjectId(user.tenantId);
+    if (!tid) throw new BadRequestException('Invalid tenant ID');
+    
     const distNumber = await this.nextDistributionNumber(user.tenantId);
     const created = await this.model.create({
       distributionNumber: distNumber,
-      issuedToUserId: body.issuedToUserId ? new Types.ObjectId(body.issuedToUserId) : undefined,
+      issuedToUserId: toObjectId(body.issuedToUserId) || undefined,
       department: body.department,
       notes: body.notes,
       tenantId: tid,
-      lines: body.lines.map((l) => ({ itemId: new Types.ObjectId(l.itemId), quantity: l.quantity })),
+      lines: body.lines.map((l) => ({ itemId: toObjectId(l.itemId), quantity: l.quantity })),
     });
     for (const l of body.lines) {
       await this.inventory.addMovement(l.itemId, StockMovementType.ISSUE, l.quantity, {
@@ -68,18 +73,28 @@ export class DistributionService {
   }
 
   async findAll(tenantId: string) {
-    const docs = await this.model.find({ tenantId: new Types.ObjectId(tenantId) }).populate('issuedToUserId').populate('lines.itemId').sort({ createdAt: -1 }).lean();
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
+    
+    const docs = await this.model.find({ tenantId: tid }).populate('issuedToUserId').populate('lines.itemId').sort({ createdAt: -1 }).lean();
     return docs.map((d: any) => this.toDist(d));
   }
 
   async findOne(id: string, tenantId: string) {
-    const doc = await this.model.findOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) })
+    const tid = toObjectId(tenantId);
+    const did = toObjectId(id);
+    if (!tid || !did) throw new BadRequestException('Invalid IDs');
+
+    const doc = await this.model.findOne({ _id: did, tenantId: tid })
       .populate('issuedToUserId').populate('lines.itemId').lean();
     if (!doc) throw new NotFoundException('Distribution not found');
     return this.toDist(doc);
   }
 
   async recordReturn(distributionId: string, tenantId: string, body: { itemId: string; quantity: number; notes?: string }, user: { id: string; tenantId: string }) {
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Invalid tenant ID');
+
     const dist = await this.findOne(distributionId, tenantId);
     const hasItem = dist?.lines?.some((l: any) => l.itemId === body.itemId || (l.item && l.item.id === body.itemId));
     if (!hasItem) throw new BadRequestException('Item not in this distribution');
@@ -93,6 +108,8 @@ export class DistributionService {
   }
 
   async recordDamage(body: { itemId: string; quantity: number; notes?: string }, user: { id: string; tenantId: string }) {
+    if (!user?.tenantId) throw new BadRequestException('Tenant ID required');
+    
     await this.inventory.addMovement(body.itemId, StockMovementType.DAMAGE, body.quantity, {
       reference: 'damage',
       notes: body.notes,

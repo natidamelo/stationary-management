@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { ItemDocument } from '../schemas/item.schema';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
+import { toObjectId } from '../common/utils';
 
 @Injectable()
 export class ItemsService {
@@ -49,27 +50,30 @@ export class ItemsService {
   }
 
   async create(dto: CreateItemDto, tenantId: string) {
-    if (!tenantId) throw new BadRequestException('Tenant ID is required');
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Tenant ID is required');
     // Generate barcode from SKU if not provided
     const barcode = dto.barcode || dto.sku;
     const created = await this.model.create({
       ...dto,
       barcode,
-      tenantId: new Types.ObjectId(tenantId),
-      categoryId: dto.categoryId ? new Types.ObjectId(dto.categoryId) : undefined,
+      tenantId: tid,
+      categoryId: toObjectId(dto.categoryId) || undefined,
     });
     return this.findOne(created._id.toString(), tenantId);
   }
 
   async findAll(tenantId: string, filters?: { categoryId?: string; search?: string }) {
-    if (!tenantId) throw new BadRequestException('Tenant ID is required');
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Tenant ID is required');
     const q: any = { 
-      tenantId: new Types.ObjectId(tenantId),
+      tenantId: tid,
       isActive: { $ne: false } 
     };
     
-    if (filters?.categoryId && Types.ObjectId.isValid(filters.categoryId)) {
-      q.categoryId = new Types.ObjectId(filters.categoryId);
+    const cid = toObjectId(filters?.categoryId);
+    if (cid) {
+      q.categoryId = cid;
     }
     
     if (filters?.search?.trim()) {
@@ -89,8 +93,11 @@ export class ItemsService {
   }
 
   async findOne(id: string, tenantId: string) {
-    if (!tenantId) throw new BadRequestException('Tenant ID is required');
-    const doc = await this.model.findOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) })
+    const tid = toObjectId(tenantId);
+    const iid = toObjectId(id);
+    if (!tid || !iid) throw new BadRequestException('Invalid IDs');
+
+    const doc = await this.model.findOne({ _id: iid, tenantId: tid })
       .populate('categoryId')
       .lean();
     if (!doc) throw new NotFoundException('Item not found');
@@ -98,28 +105,34 @@ export class ItemsService {
   }
 
   async findBySku(sku: string, tenantId: string) {
-    if (!tenantId) throw new BadRequestException('Tenant ID is required');
-    const doc = await this.model.findOne({ sku, tenantId: new Types.ObjectId(tenantId) }).lean();
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Tenant ID is required');
+    const doc = await this.model.findOne({ sku, tenantId: tid }).lean();
     return doc ? this.toItem(doc) : null;
   }
 
   async findByBarcode(barcode: string, tenantId: string) {
-    if (!tenantId) throw new BadRequestException('Tenant ID is required');
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Tenant ID is required');
     // Try to find by barcode first, then fallback to SKU
-    let doc = await this.model.findOne({ barcode, tenantId: new Types.ObjectId(tenantId) }).populate('categoryId').lean();
+    let doc = await this.model.findOne({ barcode, tenantId: tid }).populate('categoryId').lean();
     if (!doc) {
       // Fallback to SKU if barcode not found
-      doc = await this.model.findOne({ sku: barcode, tenantId: new Types.ObjectId(tenantId) }).populate('categoryId').lean();
+      doc = await this.model.findOne({ sku: barcode, tenantId: tid }).populate('categoryId').lean();
     }
     return doc ? this.toItem(doc) : null;
   }
 
   async update(id: string, dto: UpdateItemDto, tenantId: string) {
-    const existing = await this.model.findOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) }).lean();
+    const tid = toObjectId(tenantId);
+    const lid = toObjectId(id);
+    if (!tid || !lid) throw new BadRequestException('Invalid IDs');
+    
+    const existing = await this.model.findOne({ _id: lid, tenantId: tid }).lean();
     if (!existing) throw new NotFoundException('Item not found');
 
     const update: any = { ...dto };
-    if (dto.categoryId !== undefined) update.categoryId = dto.categoryId ? new Types.ObjectId(dto.categoryId) : null;
+    if (dto.categoryId !== undefined) update.categoryId = toObjectId(dto.categoryId) || null;
 
     // Generate barcode from SKU if not provided and doesn't exist
     if (!update.barcode && !existing.barcode) {
@@ -127,16 +140,20 @@ export class ItemsService {
     }
 
     await this.model.updateOne(
-      { _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) }, 
+      { _id: lid, tenantId: tid }, 
       { $set: update }
     );
     return this.findOne(id, tenantId);
   }
 
   async remove(id: string, tenantId: string) {
+    const tid = toObjectId(tenantId);
+    const lid = toObjectId(id);
+    if (!tid || !lid) throw new BadRequestException('Invalid IDs');
+    
     await this.findOne(id, tenantId);
     await this.model.updateOne(
-      { _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) }, 
+      { _id: lid, tenantId: tid }, 
       { $set: { isActive: false } }
     );
     return this.findOne(id, tenantId);
@@ -144,7 +161,9 @@ export class ItemsService {
 
   /** Bulk import from CSV text. CSV must have header row: sku,name,unit,reorderLevel,price,costPrice,barcode */
   async bulkImportFromCsv(csvText: string, tenantId: string, categoryMap?: Record<string, string>): Promise<{ imported: number; errors: string[] }> {
-    if (!tenantId) throw new BadRequestException('Tenant ID is required');
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Tenant ID is required');
+
     const lines = csvText.split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) throw new BadRequestException('CSV must have a header row and at least one data row');
     const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
@@ -154,7 +173,6 @@ export class ItemsService {
     }
     const errors: string[] = [];
     let imported = 0;
-    const tid = new Types.ObjectId(tenantId);
 
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
@@ -166,9 +184,7 @@ export class ItemsService {
       }
       try {
         const existing = await this.model.findOne({ sku: row.sku, tenantId: tid }).lean();
-        const categoryId = row.categoryid && categoryMap?.[row.categoryid]
-          ? new Types.ObjectId(categoryMap[row.categoryid])
-          : undefined;
+        const cid = toObjectId(row.categoryid && categoryMap?.[row.categoryid] ? categoryMap[row.categoryid] : undefined);
         const data: any = {
           sku: row.sku,
           name: row.name,
@@ -179,7 +195,7 @@ export class ItemsService {
           barcode: row.barcode || row.sku,
           tenantId: tid,
         };
-        if (categoryId) data.categoryId = categoryId;
+        if (cid) data.categoryId = cid;
         if (existing) {
           await this.model.updateOne({ _id: existing._id, tenantId: tid }, { $set: data });
         } else {

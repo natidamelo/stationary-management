@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { CategoryDocument } from '../schemas/category.schema';
+import { toObjectId } from '../common/utils';
 
 @Injectable()
 export class CategoriesService {
@@ -17,37 +18,50 @@ export class CategoriesService {
   }
 
   async create(name: string, tenantId: string, description?: string) {
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Tenant ID is required');
     const created = await this.model.create({ 
       name, 
       description,
-      tenantId: new Types.ObjectId(tenantId)
+      tenantId: tid
     });
-    return this.toCat(await this.model.findOne({ _id: created._id, tenantId: new Types.ObjectId(tenantId) }).lean());
+    return this.findOne(created._id.toString(), tenantId);
   }
 
   async findAll(tenantId: string) {
-    const docs = await this.model.find({ tenantId: new Types.ObjectId(tenantId) }).sort({ name: 1 }).lean();
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
+    const docs = await this.model.find({ tenantId: tid }).sort({ name: 1 }).lean();
     return docs.map((d: any) => this.toCat(d));
   }
 
   async findOne(id: string, tenantId: string) {
-    const doc = await this.model.findOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) }).lean();
+    const tid = toObjectId(tenantId);
+    const cid = toObjectId(id);
+    if (!tid || !cid) throw new BadRequestException('Invalid IDs');
+    const doc = await this.model.findOne({ _id: cid, tenantId: tid }).lean();
     if (!doc) throw new NotFoundException('Category not found');
     return this.toCat(doc);
   }
 
   async update(id: string, tenantId: string, data: { name?: string; description?: string }) {
+    const tid = toObjectId(tenantId);
+    const cid = toObjectId(id);
+    if (!tid || !cid) throw new BadRequestException('Invalid IDs');
     await this.findOne(id, tenantId);
     await this.model.updateOne(
-      { _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) }, 
+      { _id: cid, tenantId: tid }, 
       { $set: data }
     );
     return this.findOne(id, tenantId);
   }
 
   async remove(id: string, tenantId: string) {
+    const tid = toObjectId(tenantId);
+    const cid = toObjectId(id);
+    if (!tid || !cid) throw new BadRequestException('Invalid IDs');
     await this.findOne(id, tenantId);
-    await this.model.deleteOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) });
+    await this.model.deleteOne({ _id: cid, tenantId: tid });
     return { deleted: true };
   }
 }

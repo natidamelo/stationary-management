@@ -1,0 +1,7 @@
+--- Users ---
+Email: admin@example.com, tenantId: 69b884ab8ef0ba439c6989e8
+Email: reception@example.com, tenantId: 69b884ab8ef0ba439c6989e8
+Email: dealer@example.com, tenantId: 69b884ab8ef0ba439c6989e8
+
+--- Tenants ---
+Name: Default Tenant, ID: 69b884ab8ef0ba439c6989e8

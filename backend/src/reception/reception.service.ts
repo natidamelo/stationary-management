@@ -6,6 +6,7 @@ import { ItemDocument } from '../schemas/item.schema';
 import { ServiceDocument } from '../schemas/service.schema';
 import { StockMovementType } from '../common/enums';
 import { InventoryService } from '../inventory/inventory.service';
+import { toObjectId } from '../common/utils';
 
 @Injectable()
 export class ReceptionService {
@@ -20,7 +21,9 @@ export class ReceptionService {
   ) {}
 
   private async nextSaleNumber(tenantId: string): Promise<string> {
-    const last = await this.saleModel.findOne({ tenantId: new Types.ObjectId(tenantId) }).sort({ soldAt: -1 }).lean();
+    const tid = toObjectId(tenantId);
+    if (!tid) return `SAL-${Date.now()}`;
+    const last = await this.saleModel.findOne({ tenantId: tid }).sort({ soldAt: -1 }).lean();
     const num = last ? parseInt(String(last.saleNumber).replace(/\D/g, ''), 10) + 1 : 1;
     return `SAL-${String(num).padStart(6, '0')}`;
   }
@@ -79,12 +82,13 @@ export class ReceptionService {
     user: { id: string; tenantId: string },
   ) {
     if (!body.lines?.length) throw new BadRequestException('At least one line required');
-    const tid = new Types.ObjectId(user.tenantId);
+    const tid = toObjectId(user.tenantId);
+    if (!tid) throw new BadRequestException('Invalid tenant ID');
     
     // Validate items have stock and selling price does not exceed original price
     for (const l of body.lines) {
       if (l.itemId) {
-        const item = await this.itemModel.findOne({ _id: new Types.ObjectId(l.itemId), tenantId: tid }).select('name sku price').lean();
+        const item = await this.itemModel.findOne({ _id: toObjectId(l.itemId), tenantId: tid }).select('name sku price').lean();
         if (!item) throw new BadRequestException('Item not found');
         const originalPrice = Number(item.price ?? 0);
         if (l.unitPrice > originalPrice) {
@@ -100,7 +104,7 @@ export class ReceptionService {
         }
       } else if (l.serviceId) {
         // Validate service exists and is active
-        const service = await this.serviceModel.findOne({ _id: new Types.ObjectId(l.serviceId), tenantId: tid }).lean();
+        const service = await this.serviceModel.findOne({ _id: toObjectId(l.serviceId), tenantId: tid }).lean();
         if (!service || !service.isActive) {
           throw new BadRequestException(`Service not found or inactive`);
         }
@@ -117,7 +121,7 @@ export class ReceptionService {
       let lineAmount: number;
       let unitCost = 0;
       if (l.itemId) {
-        const item = await this.itemModel.findOne({ _id: new Types.ObjectId(l.itemId), tenantId: tid }).select('price costPrice').lean();
+        const item = await this.itemModel.findOne({ _id: toObjectId(l.itemId), tenantId: tid }).select('price costPrice').lean();
         lineAmount = (Number((item as any)?.price ?? 0)) * l.quantity; // use original price for sale total
         unitCost = Math.max(0, Number((item as any)?.costPrice ?? 0));
       } else {
@@ -129,12 +133,12 @@ export class ReceptionService {
         total: lineTotal,
       };
       if (l.itemId) {
-        line.itemId = new Types.ObjectId(l.itemId);
+        line.itemId = toObjectId(l.itemId);
         line.unitCost = unitCost;
       }
       if (l.serviceId) {
-        const service = await this.serviceModel.findOne({ _id: new Types.ObjectId(l.serviceId), tenantId: tid }).select('costPrice').lean();
-        line.serviceId = new Types.ObjectId(l.serviceId);
+        const service = await this.serviceModel.findOne({ _id: toObjectId(l.serviceId), tenantId: tid }).select('costPrice').lean();
+        line.serviceId = toObjectId(l.serviceId);
         line.unitCost = Math.max(0, Number((service as any)?.costPrice ?? 0));
       }
       lines.push(line);
@@ -148,7 +152,7 @@ export class ReceptionService {
     const created = await this.saleModel.create({
       saleNumber,
       soldAt: new Date(),
-      soldById: new Types.ObjectId(user.id),
+      soldById: toObjectId(user.id),
       lines,
       totalAmount,
       amountPaid,
@@ -173,7 +177,8 @@ export class ReceptionService {
   }
 
   async getTodaysSales(tenantId: string) {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const docs = await this.saleModel
@@ -187,7 +192,8 @@ export class ReceptionService {
   }
 
   async getUnpaidSales(tenantId: string) {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
     const docs = await this.saleModel
       .find({ 
         tenantId: tid,
@@ -203,8 +209,11 @@ export class ReceptionService {
   }
 
   async findOne(id: string, tenantId: string) {
+    const tid = toObjectId(tenantId);
+    const sid = toObjectId(id);
+    if (!tid || !sid) return null;
     const doc = await this.saleModel
-      .findOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) })
+      .findOne({ _id: sid, tenantId: tid })
       .populate('lines.itemId')
       .populate('lines.serviceId')
       .populate('soldById')
@@ -236,8 +245,10 @@ export class ReceptionService {
     body: { amount: number; paymentMethod?: string },
     user: { id: string; tenantId: string },
   ) {
-    const tid = new Types.ObjectId(tenantId);
-    const sale = await this.saleModel.findOne({ _id: new Types.ObjectId(saleId), tenantId: tid }).lean();
+    const tid = toObjectId(tenantId);
+    const sid = toObjectId(saleId);
+    if (!tid || !sid) throw new BadRequestException('Invalid IDs');
+    const sale = await this.saleModel.findOne({ _id: sid, tenantId: tid }).lean();
     if (!sale) throw new BadRequestException('Sale not found');
     const totalAmount = Number(sale.totalAmount ?? 0);
     const currentPaid = Number((sale as any).amountPaid ?? totalAmount);
@@ -251,7 +262,7 @@ export class ReceptionService {
     if (payAmount <= 0) throw new BadRequestException('Payment amount must be greater than 0');
     const newAmountPaid = currentPaid + payAmount;
     await this.saleModel.updateOne(
-      { _id: saleId, tenantId: tid },
+      { _id: sid, tenantId: tid },
       { $set: { amountPaid: newAmountPaid } },
     );
     return this.findOne(saleId, tenantId);

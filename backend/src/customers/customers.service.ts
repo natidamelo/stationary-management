@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { CustomerDocument } from '../schemas/customer.schema';
+import { toObjectId } from '../common/utils';
 
 @Injectable()
 export class CustomersService {
@@ -17,9 +18,12 @@ export class CustomersService {
     address?: string;
     notes?: string;
   }, tenantId: string) {
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Tenant ID is required');
+
     const existing = await this.customerModel.findOne({ 
       email: data.email.toLowerCase(),
-      tenantId: new Types.ObjectId(tenantId)
+      tenantId: tid
     }).lean();
     if (existing) {
       throw new BadRequestException('A customer with this email already exists.');
@@ -30,18 +34,24 @@ export class CustomersService {
       contact: data.contact,
       address: data.address,
       notes: data.notes,
-      tenantId: new Types.ObjectId(tenantId),
+      tenantId: tid,
     });
     return this.findById(created._id.toString(), tenantId);
   }
 
   async findAll(tenantId: string) {
-    const docs = await this.customerModel.find({ tenantId: new Types.ObjectId(tenantId) }).sort({ createdAt: -1 }).lean();
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
+    const docs = await this.customerModel.find({ tenantId: tid }).sort({ createdAt: -1 }).lean();
     return docs.map((d: any) => this.toCustomer(d));
   }
 
   async findById(id: string, tenantId: string) {
-    const doc = await this.customerModel.findOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) }).lean();
+    const tid = toObjectId(tenantId);
+    const cid = toObjectId(id);
+    if (!tid || !cid) throw new BadRequestException('Invalid IDs');
+    
+    const doc = await this.customerModel.findOne({ _id: cid, tenantId: tid }).lean();
     if (!doc) throw new NotFoundException('Customer not found');
     return this.toCustomer(doc);
   }
@@ -53,26 +63,35 @@ export class CustomersService {
     address: string;
     notes: string;
   }>, tenantId: string) {
-    const doc = await this.customerModel.findOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) }).lean();
+    const tid = toObjectId(tenantId);
+    const cid = toObjectId(id);
+    if (!tid || !cid) throw new BadRequestException('Invalid IDs');
+
+    const doc = await this.customerModel.findOne({ _id: cid, tenantId: tid }).lean();
     if (!doc) throw new NotFoundException('Customer not found');
+    
     if (data.email && data.email !== doc.email) {
       const existing = await this.customerModel.findOne({ 
         email: data.email.toLowerCase(),
-        tenantId: new Types.ObjectId(tenantId)
+        tenantId: tid
       }).lean();
       if (existing) throw new BadRequestException('A customer with this email already exists.');
     }
     await this.customerModel.updateOne(
-      { _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) },
+      { _id: cid, tenantId: tid },
       { $set: { ...data, email: data.email?.toLowerCase(), updatedAt: new Date() } },
     );
     return this.findById(id, tenantId);
   }
 
   async delete(id: string, tenantId: string) {
-    const doc = await this.customerModel.findOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) }).lean();
+    const tid = toObjectId(tenantId);
+    const cid = toObjectId(id);
+    if (!tid || !cid) throw new BadRequestException('Invalid IDs');
+
+    const doc = await this.customerModel.findOne({ _id: cid, tenantId: tid }).lean();
     if (!doc) throw new NotFoundException('Customer not found');
-    await this.customerModel.deleteOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) });
+    await this.customerModel.deleteOne({ _id: cid, tenantId: tid });
     return { success: true };
   }
 

@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { InvoiceDocument } from '../schemas/invoice.schema';
 import { SaleDocument } from '../schemas/sale.schema';
+import { toObjectId } from '../common/utils';
 
 @Injectable()
 export class InvoicesService {
@@ -14,7 +15,9 @@ export class InvoicesService {
   ) { }
 
   private async nextInvoiceNumber(tenantId: string): Promise<string> {
-    const last = await this.invoiceModel.findOne({ tenantId: new Types.ObjectId(tenantId) }).sort({ issueDate: -1 }).lean();
+    const tid = toObjectId(tenantId);
+    if (!tid) return `INV-${Date.now()}`;
+    const last = await this.invoiceModel.findOne({ tenantId: tid }).sort({ issueDate: -1 }).lean();
     const num = last
       ? parseInt(String((last as any).invoiceNumber).replace(/\D/g, ''), 10) + 1
       : 1;
@@ -45,8 +48,10 @@ export class InvoicesService {
   }
 
   async findAll(tenantId: string): Promise<any[]> {
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
     const docs = await this.invoiceModel
-      .find({ tenantId: new Types.ObjectId(tenantId) })
+      .find({ tenantId: tid })
       .populate('saleId', 'saleNumber soldAt totalAmount amountPaid')
       .sort({ issueDate: -1 })
       .lean();
@@ -54,22 +59,28 @@ export class InvoicesService {
   }
 
   async findOne(id: string, tenantId: string): Promise<any> {
+    const tid = toObjectId(tenantId);
+    const iid = toObjectId(id);
+    if (!tid || !iid) return null;
     const doc = await this.invoiceModel
-      .findOne({ _id: new Types.ObjectId(id), tenantId: new Types.ObjectId(tenantId) })
+      .findOne({ _id: iid, tenantId: tid })
       .populate('saleId', 'saleNumber soldAt totalAmount amountPaid')
       .lean();
     return this.toInvoice(doc);
   }
 
   async createFromSale(saleId: string, tenantId: string, options?: { customerEmail?: string; customerAddress?: string }): Promise<any> {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    const sid = toObjectId(saleId);
+    if (!tid || !sid) throw new BadRequestException('Invalid IDs');
+
     const sale = await this.saleModel
-      .findOne({ _id: new Types.ObjectId(saleId), tenantId: tid })
+      .findOne({ _id: sid, tenantId: tid })
       .populate('lines.itemId', 'name sku')
       .populate('lines.serviceId', 'name')
       .lean();
     if (!sale) throw new BadRequestException('Sale not found');
-    const existing = await this.invoiceModel.findOne({ saleId: new Types.ObjectId(saleId), tenantId: tid }).lean();
+    const existing = await this.invoiceModel.findOne({ saleId: sid, tenantId: tid }).lean();
     if (existing) {
       return this.toInvoice(
         await this.invoiceModel
@@ -91,7 +102,7 @@ export class InvoicesService {
     const invoiceNumber = await this.nextInvoiceNumber(tenantId);
     const created = await this.invoiceModel.create({
       invoiceNumber,
-      saleId: new Types.ObjectId(saleId),
+      saleId: sid,
       issueDate: new Date(),
       customerName: o.customerName,
       customerEmail: options?.customerEmail,
@@ -112,12 +123,15 @@ export class InvoicesService {
   }
 
   async markPaid(id: string, tenantId: string, amountPaid?: number): Promise<any> {
-    const tid = new Types.ObjectId(tenantId);
-    const doc = await this.invoiceModel.findOne({ _id: new Types.ObjectId(id), tenantId: tid });
+    const tid = toObjectId(tenantId);
+    const iid = toObjectId(id);
+    if (!tid || !iid) throw new BadRequestException('Invalid IDs');
+
+    const doc = await this.invoiceModel.findOne({ _id: iid, tenantId: tid });
     if (!doc) throw new BadRequestException('Invoice not found');
     const paid = amountPaid !== undefined ? amountPaid : doc.totalAmount;
     await this.invoiceModel.updateOne(
-      { _id: doc._id, tenantId: tid },
+      { _id: iid, tenantId: tid },
       { $set: { amountPaid: paid, status: paid >= doc.totalAmount ? 'paid' : 'partial' } },
     );
     return this.findOne(id, tenantId);

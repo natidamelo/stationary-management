@@ -105,9 +105,10 @@ export class AuthService {
 
     const hashed = await bcrypt.hash(dto.password, 10);
     return this.usersService.create({
-      ...dto,
       email,
       passwordHash: hashed,
+      fullName: dto.fullName,
+      department: dto.department,
       roleName: dto.roleName || 'admin',
       tenantId,
     });

@@ -12,7 +12,10 @@ import { CustomerDocument } from '../schemas/customer.schema';
 import { toObjectId } from '../common/utils';
 
 function formatLicenseKey(raw: string): string {
-// ... segments loop
+  const segments: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    segments.push(raw.slice(i * 5, (i + 1) * 5).toUpperCase());
+  }
   return segments.join('-');
 }
 
@@ -44,7 +47,41 @@ export class LicenseService {
       .findOne({ tenantId: tid, computerId, status: 'active' })
       .populate('customerId')
       .lean();
-// ... logic
+
+    if (!license) return { valid: false, message: 'No valid license found for this computer.' };
+
+    const now = new Date();
+    const startDate = new Date(license.startDate);
+    const expiryDate = new Date(license.expiryDate);
+
+    if (now < startDate) {
+      return {
+        valid: false,
+        message: 'License has not yet started.',
+        startDate,
+        expiryDate,
+        customerName: (license as any).customerId?.name,
+        licenseKey: license.licenseKey,
+      };
+    }
+    if (now > expiryDate) {
+      return {
+        valid: false,
+        message: 'License has expired.',
+        startDate,
+        expiryDate,
+        customerName: (license as any).customerId?.name,
+        licenseKey: license.licenseKey,
+      };
+    }
+
+    return {
+      valid: true,
+      startDate,
+      expiryDate,
+      customerName: (license as any).customerId?.name,
+      licenseKey: license.licenseKey,
+    };
   }
 
   async validateLicense(computerId: string, tenantId: string): Promise<{ valid: boolean; message?: string }> {
@@ -56,64 +93,6 @@ export class LicenseService {
 
     const license = await this.licenseModel
       .findOne({ tenantId: tid, computerId, status: 'active' })
-      .populate('customerId')
-      .lean();
-// ... logic
-  }
-
-  async generateLicense(tenantId: string, data: {
-    customerId: string;
-    computerId: string;
-    startDate?: Date;
-    durationYears?: number;
-    duration?: number;
-    durationUnit?: 'day' | 'month' | 'year';
-    expiryDate?: Date | string;
-  }): Promise<{ licenseKey: string; licence: any }> {
-    const tid = toObjectId(tenantId);
-    if (!tid) throw new BadRequestException('Invalid tenant');
-    const customer = await this.customerModel.findOne({ _id: toObjectId(data.customerId), tenantId: tid }).lean();
-
-    if (!license) return { valid: false, message: 'No valid license found for this computer.' };
-
-    const now = new Date();
-    if (now < new Date(license.startDate)) {
-      return {
-        valid: false,
-        message: 'License has not yet started.',
-        startDate: license.startDate,
-        expiryDate: license.expiryDate,
-        customerName: (license as any).customerId?.name,
-      };
-    }
-    if (now > new Date(license.expiryDate)) {
-      return {
-        valid: false,
-        message: 'License has expired.',
-        startDate: license.startDate,
-        expiryDate: license.expiryDate,
-        customerName: (license as any).customerId?.name,
-      };
-    }
-
-    return {
-      valid: true,
-      startDate: license.startDate,
-      expiryDate: license.expiryDate,
-      customerName: (license as any).customerId?.name,
-      licenseKey: license.licenseKey,
-    };
-  }
-
-  async validateLicense(computerId: string, tenantId: string): Promise<{ valid: boolean; message?: string }> {
-    const tid = new Types.ObjectId(tenantId);
-    // First-time setup: if no licenses exist, allow login (admin can create licenses)
-    const anyLicense = await this.licenseModel.countDocuments({ tenantId: tid }).lean();
-    if (anyLicense === 0) return { valid: true };
-
-    const license = await this.licenseModel
-      .findOne({ tenantId: tid, computerId, status: 'active' })
-      .populate('customerId')
       .lean();
 
     if (!license) {
@@ -121,10 +100,13 @@ export class LicenseService {
     }
 
     const now = new Date();
-    if (now < new Date(license.startDate)) {
+    const startDate = new Date(license.startDate);
+    const expiryDate = new Date(license.expiryDate);
+
+    if (now < startDate) {
       return { valid: false, message: 'License has not yet started.' };
     }
-    if (now > new Date(license.expiryDate)) {
+    if (now > expiryDate) {
       await this.licenseModel.updateOne(
         { _id: license._id },
         { $set: { status: 'expired', updatedAt: new Date() } },
@@ -144,8 +126,9 @@ export class LicenseService {
     durationUnit?: 'day' | 'month' | 'year';
     expiryDate?: Date | string;
   }): Promise<{ licenseKey: string; licence: any }> {
-    const tid = new Types.ObjectId(tenantId);
-    const customer = await this.customerModel.findOne({ _id: new Types.ObjectId(data.customerId), tenantId: tid }).lean();
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Invalid tenant');
+    const customer = await this.customerModel.findOne({ _id: toObjectId(data.customerId), tenantId: tid }).lean();
     if (!customer) throw new NotFoundException('Customer not found');
 
     const existing = await this.licenseModel
@@ -160,18 +143,15 @@ export class LicenseService {
     const startDate = data.startDate || new Date();
     let expiryDate: Date;
     
-    // If expiryDate is provided directly, use it
     if (data.expiryDate) {
       expiryDate = new Date(data.expiryDate);
       if (isNaN(expiryDate.getTime())) {
         throw new BadRequestException('Invalid expiry date provided');
       }
     } 
-    // If duration and durationUnit are provided, calculate expiry date
     else if (data.duration !== undefined && data.durationUnit && data.duration > 0) {
       expiryDate = new Date(startDate);
       const duration = Number(data.duration);
-      
       if (isNaN(duration) || duration <= 0) {
         throw new BadRequestException('Duration must be a positive number');
       }
@@ -186,12 +166,8 @@ export class LicenseService {
         throw new BadRequestException('Invalid duration unit. Must be day, month, or year');
       }
     }
-    // Fallback to durationYears for backward compatibility
     else {
       const durationYears = data.durationYears ?? 1;
-      if (durationYears <= 0) {
-        throw new BadRequestException('Duration years must be a positive number');
-      }
       expiryDate = new Date(startDate);
       expiryDate.setFullYear(expiryDate.getFullYear() + Math.floor(durationYears));
     }
@@ -204,7 +180,7 @@ export class LicenseService {
     const created = await this.licenseModel.create({
       tenantId: tid,
       licenseKey,
-      customerId: new Types.ObjectId(data.customerId),
+      customerId: toObjectId(data.customerId),
       computerId: data.computerId,
       startDate,
       expiryDate,
@@ -231,23 +207,25 @@ export class LicenseService {
     durationUnit?: 'day' | 'month' | 'year';
     expiryDate?: Date | string;
   }): Promise<any> {
-    const tid = new Types.ObjectId(tenantId);
-    const license = await this.licenseModel.findOne({ _id: new Types.ObjectId(data.id), tenantId: tid }).lean();
+    const tid = toObjectId(tenantId);
+    const lid = toObjectId(data.id);
+    if (!tid || !lid) throw new BadRequestException('Invalid IDs');
+    
+    const license = await this.licenseModel.findOne({ _id: lid, tenantId: tid }).lean();
     if (!license) throw new NotFoundException('License not found');
 
-    // If computer ID is changing, ensure there is no other active license on that computer.
     if (data.computerId && data.computerId !== license.computerId) {
       const existing = await this.licenseModel
         .findOne({
           tenantId: tid,
           computerId: data.computerId,
           status: 'active',
-          _id: { $ne: license._id },
+          _id: { $ne: lid },
         })
         .lean();
       if (existing) {
         throw new ConflictException(
-          'An active license already exists for this computer. Extend it or suspend it first.',
+          'An active license already exists for this computer.',
         );
       }
     }
@@ -255,51 +233,29 @@ export class LicenseService {
     const startDate = license.startDate;
     let expiryDate: Date;
     
-    // If expiryDate is provided directly, use it
     if (data.expiryDate) {
       expiryDate = new Date(data.expiryDate);
-      if (isNaN(expiryDate.getTime())) {
-        throw new BadRequestException('Invalid expiry date provided');
-      }
     } 
-    // If duration and durationUnit are provided, calculate expiry date
     else if (data.duration !== undefined && data.durationUnit && data.duration > 0) {
       expiryDate = new Date(startDate);
       const duration = Number(data.duration);
-      
-      if (isNaN(duration) || duration <= 0) {
-        throw new BadRequestException('Duration must be a positive number');
-      }
-      
-      if (data.durationUnit === 'day') {
-        expiryDate.setDate(expiryDate.getDate() + Math.floor(duration));
-      } else if (data.durationUnit === 'month') {
-        expiryDate.setMonth(expiryDate.getMonth() + Math.floor(duration));
-      } else if (data.durationUnit === 'year') {
-        expiryDate.setFullYear(expiryDate.getFullYear() + Math.floor(duration));
-      } else {
-        throw new BadRequestException('Invalid duration unit. Must be day, month, or year');
-      }
+      if (data.durationUnit === 'day') expiryDate.setDate(expiryDate.getDate() + duration);
+      else if (data.durationUnit === 'month') expiryDate.setMonth(expiryDate.getMonth() + duration);
+      else if (data.durationUnit === 'year') expiryDate.setFullYear(expiryDate.getFullYear() + duration);
     }
-    // Fallback to durationYears for backward compatibility
     else if (data.durationYears !== undefined) {
-      const durationYears = Number(data.durationYears);
-      if (isNaN(durationYears) || durationYears <= 0) {
-        throw new BadRequestException('Duration years must be a positive number');
-      }
       expiryDate = new Date(startDate);
-      expiryDate.setFullYear(expiryDate.getFullYear() + Math.floor(durationYears));
+      expiryDate.setFullYear(expiryDate.getFullYear() + Number(data.durationYears));
     }
-    // If no duration or expiry date provided, throw error
     else {
-      throw new BadRequestException('Either expiryDate or duration with durationUnit must be provided');
+      expiryDate = new Date(license.expiryDate);
     }
 
     await this.licenseModel.updateOne(
-      { _id: license._id },
+      { _id: lid },
       {
         $set: {
-          customerId: new Types.ObjectId(data.customerId),
+          customerId: toObjectId(data.customerId),
           computerId: data.computerId,
           expiryDate,
           updatedAt: new Date(),
@@ -308,7 +264,7 @@ export class LicenseService {
     );
     
     const updated = await this.licenseModel
-      .findById(license._id)
+      .findById(lid)
       .populate('customerId')
       .lean();
     
@@ -323,32 +279,26 @@ export class LicenseService {
     durationUnit?: 'day' | 'month' | 'year',
     expiryDate?: Date | string
   ): Promise<any> {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Invalid tenant');
     const license = await this.licenseModel.findOne({ tenantId: tid, licenseKey }).lean();
     if (!license) throw new NotFoundException('License not found');
 
     let newExpiryDate: Date;
     
-    // If expiryDate is provided directly, use it
     if (expiryDate) {
       newExpiryDate = new Date(expiryDate);
     }
-    // If duration and durationUnit are provided, calculate from current expiry
     else if (duration !== undefined && durationUnit) {
       const currentExpiry = new Date(license.expiryDate);
       const now = new Date();
       const baseExpiry = currentExpiry > now ? currentExpiry : now;
       newExpiryDate = new Date(baseExpiry);
       
-      if (durationUnit === 'day') {
-        newExpiryDate.setDate(newExpiryDate.getDate() + duration);
-      } else if (durationUnit === 'month') {
-        newExpiryDate.setMonth(newExpiryDate.getMonth() + duration);
-      } else if (durationUnit === 'year') {
-        newExpiryDate.setFullYear(newExpiryDate.getFullYear() + duration);
-      }
+      if (durationUnit === 'day') newExpiryDate.setDate(newExpiryDate.getDate() + duration);
+      else if (durationUnit === 'month') newExpiryDate.setMonth(newExpiryDate.getMonth() + duration);
+      else if (durationUnit === 'year') newExpiryDate.setFullYear(newExpiryDate.getFullYear() + duration);
     }
-    // Fallback to extendYears for backward compatibility
     else {
       const years = extendYears ?? 1;
       const currentExpiry = new Date(license.expiryDate);
@@ -373,7 +323,8 @@ export class LicenseService {
   }
 
   async findByKey(tenantId: string, licenseKey: string) {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Invalid tenant');
     const doc = await this.licenseModel
       .findOne({ tenantId: tid, licenseKey })
       .populate('customerId')
@@ -383,9 +334,11 @@ export class LicenseService {
   }
 
   async findByCustomer(tenantId: string, customerId: string) {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    const cid = toObjectId(customerId);
+    if (!tid || !cid) return [];
     const docs = await this.licenseModel
-      .find({ tenantId: tid, customerId: new Types.ObjectId(customerId) })
+      .find({ tenantId: tid, customerId: cid })
       .populate('customerId')
       .sort({ createdAt: -1 })
       .lean();
@@ -393,7 +346,8 @@ export class LicenseService {
   }
 
   async findAll(tenantId: string) {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) return [];
     const docs = await this.licenseModel
       .find({ tenantId: tid })
       .populate('customerId')
@@ -403,7 +357,8 @@ export class LicenseService {
   }
 
   async suspend(tenantId: string, licenseKey: string) {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Invalid tenant');
     const license = await this.licenseModel.findOne({ tenantId: tid, licenseKey });
     if (!license) throw new NotFoundException('License not found');
     await this.licenseModel.updateOne(
@@ -414,7 +369,8 @@ export class LicenseService {
   }
 
   async reactivate(tenantId: string, licenseKey: string) {
-    const tid = new Types.ObjectId(tenantId);
+    const tid = toObjectId(tenantId);
+    if (!tid) throw new BadRequestException('Invalid tenant');
     const license = await this.licenseModel.findOne({ tenantId: tid, licenseKey });
     if (!license) throw new NotFoundException('License not found');
     const now = new Date();
@@ -429,6 +385,7 @@ export class LicenseService {
   }
 
   private toLicense(doc: any) {
+    if (!doc) return null;
     const c = doc.customerId;
     return {
       id: doc._id?.toString(),

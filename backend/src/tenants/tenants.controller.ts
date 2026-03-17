@@ -11,6 +11,12 @@ import { Roles } from '../decorators/roles.decorator';
 @Controller('api/tenants')
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
+  
+  @Get('ping')
+  @ApiOperation({ summary: 'Public health check for tenants controller' })
+  ping() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
 
   @Post()
   create(@Body() createTenantDto: CreateTenantDto) {

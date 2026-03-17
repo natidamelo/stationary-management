@@ -9,4 +9,9 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @Get('health')
+  getHealth() {
+    return { status: 'ok', version: '1.0.1', deployedAt: new Date().toISOString() };
+  }
 }

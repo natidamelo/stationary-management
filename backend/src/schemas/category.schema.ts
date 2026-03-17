@@ -6,7 +6,7 @@ export class CategoryDocument extends Document {
   @Prop({ type: Types.ObjectId, ref: 'TenantDocument' })
   tenantId: Types.ObjectId;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   name: string;
 
   @Prop()
@@ -14,3 +14,4 @@ export class CategoryDocument extends Document {
 }
 
 export const CategorySchema = SchemaFactory.createForClass(CategoryDocument);
+CategorySchema.index({ tenantId: 1, name: 1 }, { unique: true });

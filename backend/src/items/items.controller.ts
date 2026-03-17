@@ -28,7 +28,7 @@ export class ItemsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.INVENTORY_CLERK, RoleEnum.MANAGER)
+  @Roles(RoleEnum.ADMIN, RoleEnum.INVENTORY_CLERK, RoleEnum.MANAGER, RoleEnum.DEALER)
   create(@Body() dto: CreateItemDto, @Request() req: any) {
     return this.items.create(dto, req.user.tenantId);
   }
@@ -56,21 +56,21 @@ export class ItemsController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.INVENTORY_CLERK, RoleEnum.MANAGER)
+  @Roles(RoleEnum.ADMIN, RoleEnum.INVENTORY_CLERK, RoleEnum.MANAGER, RoleEnum.DEALER)
   update(@Param('id') id: string, @Body() dto: UpdateItemDto, @Request() req: any) {
     return this.items.update(id, dto, req.user.tenantId);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.DEALER)
   remove(@Param('id') id: string, @Request() req: any) {
     return this.items.remove(id, req.user.tenantId);
   }
 
   @Post('bulk-import')
   @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.INVENTORY_CLERK, RoleEnum.MANAGER)
+  @Roles(RoleEnum.ADMIN, RoleEnum.INVENTORY_CLERK, RoleEnum.MANAGER, RoleEnum.DEALER)
   bulkImport(@Body() body: { csv: string; categoryMap?: Record<string, string> }, @Request() req: any) {
     return this.items.bulkImportFromCsv(body.csv, req.user.tenantId, body.categoryMap);
   }

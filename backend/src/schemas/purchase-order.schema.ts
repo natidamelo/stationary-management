@@ -23,7 +23,7 @@ export class PurchaseOrderDocument extends Document {
   @Prop({ type: Types.ObjectId, ref: 'TenantDocument' })
   tenantId: Types.ObjectId;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   poNumber: string;
 
   @Prop({ type: Types.ObjectId, ref: 'SupplierDocument', required: true })
@@ -52,3 +52,4 @@ export class PurchaseOrderDocument extends Document {
 }
 
 export const PurchaseOrderSchema = SchemaFactory.createForClass(PurchaseOrderDocument);
+PurchaseOrderSchema.index({ tenantId: 1, poNumber: 1 }, { unique: true });

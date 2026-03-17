@@ -560,9 +560,11 @@ export default function Reception() {
       setAmountPaid('');
       load();
     } catch (err: unknown) {
-      const res = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message;
-      const msg = Array.isArray(res) ? res.join(' ') : res || 'Sale could not be completed. Please try again.';
-      setSellError(msg);
+      const errorData = (err as any)?.response?.data;
+      const msg = errorData?.message || 'Sale could not be completed. Please try again.';
+      const trace = errorData?.trace ? ` | TRACE: ${errorData.trace.substring(0, 500)}...` : '';
+      setSellError(`${Array.isArray(msg) ? msg.join(' ') : msg}${trace}`);
+      setTimeout(() => setSellError(''), 20000); // 20s for long trace reading
     } finally {
       setSelling(false);
     }

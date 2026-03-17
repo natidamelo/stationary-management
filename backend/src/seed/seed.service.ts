@@ -33,7 +33,7 @@ export class SeedService implements OnApplicationBootstrap {
     await this.seedDealerIfNeeded(defaultTenant._id);
     await this.seedAdminIfNeeded(defaultTenant._id);
     await this.seedReceptionIfNeeded(defaultTenant._id);
-    // await this.seedExampleDataIfNeeded(defaultTenant._id); // Disabled to keep it clean for new users
+    await this.seedExampleDataIfNeeded(defaultTenant._id); // Disabled to keep it clean for new users
     console.log('[Seed] Default users: admin@example.com / Admin@123, dealer@example.com / Dealer@123, reception@example.com / Reception@123');
   }
 

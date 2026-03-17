@@ -62,40 +62,57 @@ export class InventoryService {
       session?: ClientSession;
     },
   ) {
-    const tenantId = opts.performedBy?.tenantId;
-    if (!tenantId) throw new BadRequestException('Tenant ID required for stock movement');
-    const tid = toObjectId(tenantId);
-    const itemIdObj = toObjectId(itemId);
-    if (!tid || !itemIdObj) throw new BadRequestException('Invalid IDs');
+    try {
+      const tenantId = opts.performedBy?.tenantId;
+      if (!tenantId) throw new BadRequestException('Tenant ID required for stock movement');
+      const tid = toObjectId(tenantId);
+      const itemIdObj = toObjectId(itemId);
+      if (!tid || !itemIdObj) throw new BadRequestException('Invalid IDs for inventory');
 
-    const item = await this.itemModel.findOne({ _id: itemIdObj, tenantId: tid }).lean();
-    if (!item) throw new NotFoundException('Item not found');
-    const current = await this.getBalance(itemId, tenantId);
-    const isIn = type === StockMovementType.PURCHASE || type === StockMovementType.RETURN;
-    const delta = type === StockMovementType.ADJUSTMENT ? quantity : isIn ? quantity : -quantity;
-    const newBalance = current + delta;
-    if (newBalance < 0) throw new BadRequestException('Insufficient stock');
-    const createOpts = opts.session ? { session: opts.session } : {};
-    const [created] = await this.movementModel.create(
-      [
-        {
-          itemId: itemIdObj,
-          type,
-          quantity: type === StockMovementType.ADJUSTMENT ? quantity : Math.abs(quantity),
-          balanceAfter: newBalance,
-          reference: opts.reference,
-          referenceId: opts.referenceId,
-          notes: opts.notes,
-          performedById: toObjectId(opts.performedBy?.id) || undefined,
-          tenantId: tid,
-        },
-      ],
-      createOpts,
-    );
-    let query = this.movementModel.findById(created._id).populate('itemId');
-    if (opts.session) query = query.session(opts.session);
-    const doc = await query.lean();
-    return this.toMovement(doc);
+      const item = await this.itemModel.findOne({ _id: itemIdObj, tenantId: tid }).lean();
+      if (!item) throw new BadRequestException(`Item not found: ${itemId}`);
+      
+      const current = await this.getBalance(itemId, tenantId);
+      const qtyNum = Number(quantity) || 0;
+      const isIn = type === StockMovementType.PURCHASE || type === StockMovementType.RETURN;
+      const delta = type === StockMovementType.ADJUSTMENT ? qtyNum : isIn ? qtyNum : -qtyNum;
+      
+      const newBalance = (Number(current) || 0) + delta;
+      
+      // Hard check for NaN to avoid Mongoose 500
+      if (isNaN(newBalance)) {
+          throw new BadRequestException(`Invalid stock calculation: result is NaN`);
+      }
+      
+      if (newBalance < 0) throw new BadRequestException(`Insufficient stock for ${item.name}. Current: ${current}, Required: ${Math.abs(delta)}`);
+      
+      const createOpts = opts.session ? { session: opts.session } : {};
+      const [created] = await this.movementModel.create(
+        [
+          {
+            itemId: itemIdObj,
+            type,
+            quantity: type === StockMovementType.ADJUSTMENT ? qtyNum : Math.abs(qtyNum),
+            balanceAfter: newBalance,
+            reference: opts.reference,
+            referenceId: opts.referenceId,
+            notes: opts.notes,
+            performedById: toObjectId(opts.performedBy?.id) || undefined,
+            tenantId: tid,
+          },
+        ],
+        createOpts,
+      );
+      
+      let query = this.movementModel.findById(created._id).populate('itemId');
+      if (opts.session) query = query.session(opts.session);
+      const doc = await query.lean();
+      return this.toMovement(doc);
+    } catch (err: any) {
+      console.error('Inventory Error:', err);
+      if (err.status) throw err;
+      throw new BadRequestException(`Inventory operation failed: ${err.message || String(err)}`);
+    }
   }
 
   private toMovement(doc: any) {

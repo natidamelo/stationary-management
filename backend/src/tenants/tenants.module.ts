@@ -18,4 +18,8 @@ import { LicenseDocument, LicenseSchema } from '../schemas/license.schema';
   providers: [TenantsService],
   exports: [TenantsService],
 })
-export class TenantsModule {}
+export class TenantsModule {
+  constructor() {
+    console.log('TenantsModule initialized');
+  }
+}

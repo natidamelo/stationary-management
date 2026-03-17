@@ -30,7 +30,7 @@ export class SaleDocument extends Document {
   @Prop({ type: Types.ObjectId, ref: 'TenantDocument' })
   tenantId: Types.ObjectId;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   saleNumber: string;
 
   @Prop({ required: true, default: () => new Date() })
@@ -60,3 +60,4 @@ export class SaleDocument extends Document {
 }
 
 export const SaleSchema = SchemaFactory.createForClass(SaleDocument);
+SaleSchema.index({ tenantId: 1, saleNumber: 1 }, { unique: true });

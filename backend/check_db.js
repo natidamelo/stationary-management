@@ -1,31 +1,29 @@
-
 const mongoose = require('mongoose');
 
-async function check() {
-    try {
-        await mongoose.connect('mongodb://localhost:27017/stationery_management');
-        console.log('--- DB Check ---');
+const uri = "mongodb+srv://kinfenati7_db_user:3nCkjUWaBLmIMG0C@cluster0.usuuyhh.mongodb.net/stationery_management?appName=Cluster0";
 
-        const Tenant = mongoose.model('tenants', new mongoose.Schema({ name: String }, { strict: false }));
-        const User = mongoose.model('users', new mongoose.Schema({ email: String, tenantId: mongoose.Schema.Types.ObjectId }, { strict: false }));
-        const Role = mongoose.model('roles', new mongoose.Schema({ name: String }, { strict: false }));
+async function run() {
+  try {
+    await mongoose.connect(uri);
+    console.log("Connected to MongoDB");
+    
+    const Tenant = mongoose.model('Tenant', new mongoose.Schema({ name: String }, { collection: 'tenants' }));
+    const Item = mongoose.model('Item', new mongoose.Schema({ name: String, sku: String, tenantId: mongoose.Schema.Types.ObjectId }, { collection: 'items' }));
 
-        const tenants = await Tenant.find().lean();
-        console.log('Tenants:', tenants.map(t => ({ name: t.name, id: t._id })));
+    const tenants = await Tenant.find({});
+    console.log("\n--- Tenants ---");
+    tenants.forEach(t => console.log(`${t.name} (ID: ${t._id})`));
 
-        const users = await User.find().lean();
-        console.log('Users:', users.map(u => ({ email: u.email, tid: u.tenantId })));
+    const items = await Item.find({});
+    console.log("\n--- Items ---");
+    console.log("Total items in DB:", items.length);
+    items.forEach(i => console.log(`- ${i.name} (SKU: ${i.sku}, Tenant: ${i.tenantId})`));
 
-        const roles = await Role.find().lean();
-        console.log('Roles:', roles.map(r => r.name));
-
-        const adminRole = await Role.findOne({ name: 'admin' }).lean();
-        console.log('Admin Role exists:', !!adminRole);
-
-        await mongoose.disconnect();
-    } catch (err) {
-        console.error('Error:', err);
-    }
+    process.exit(0);
+  } catch (err) {
+    console.error("Error:", err);
+    process.exit(1);
+  }
 }
 
-check();
+run();

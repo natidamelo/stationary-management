@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards, BadRequestException } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ReceptionService } from './reception.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
@@ -17,7 +17,7 @@ export class ReceptionController {
 
   @Get('dashboard')
   @UseGuards(RolesGuard)
-  @Roles(RoleEnum.RECEPTION, RoleEnum.ADMIN, RoleEnum.MANAGER)
+  @Roles(RoleEnum.RECEPTION, RoleEnum.ADMIN, RoleEnum.MANAGER, RoleEnum.DEALER)
   dashboard(@CurrentUser() user: UserPayload) {
     return this.reception.getDashboard(user.tenantId);
   }
@@ -38,7 +38,7 @@ export class ReceptionController {
 
   @Post('sell')
   @UseGuards(RolesGuard)
-  @Roles(RoleEnum.RECEPTION, RoleEnum.ADMIN)
+  @Roles(RoleEnum.RECEPTION, RoleEnum.ADMIN, RoleEnum.DEALER)
   sell(
     @Body()
     body: {

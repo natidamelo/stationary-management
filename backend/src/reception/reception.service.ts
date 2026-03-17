@@ -24,8 +24,19 @@ export class ReceptionService {
     const tid = toObjectId(tenantId);
     if (!tid) return `SAL-${Date.now()}`;
     const last = await this.saleModel.findOne({ tenantId: tid }).sort({ soldAt: -1 }).lean();
-    const num = last ? parseInt(String(last.saleNumber).replace(/\D/g, ''), 10) + 1 : 1;
-    return `SAL-${String(num).padStart(6, '0')}`;
+    let num = 1;
+    if (last && last.saleNumber) {
+        const match = last.saleNumber.match(/(\d+)$/);
+        if (match) {
+            num = parseInt(match[1], 10) + 1;
+        }
+    }
+    // Prepend tenant prefix and append timestamp to guarantee uniqueness
+    const prefix = tenantId.toString().slice(-4).toUpperCase();
+    const ts = Date.now().toString().slice(-6);
+    const finalSaleNumber = `SAL-${prefix}-${String(num).padStart(5, '0')}-${ts}`;
+    console.log(`[ReceptionService] Generated sale number: ${finalSaleNumber}`);
+    return finalSaleNumber;
   }
 
   private toSale(doc: any) {
@@ -81,99 +92,128 @@ export class ReceptionService {
     },
     user: { id: string; tenantId: string },
   ) {
-    if (!body.lines?.length) throw new BadRequestException('At least one line required');
-    const tid = toObjectId(user.tenantId);
-    if (!tid) throw new BadRequestException('Invalid tenant ID');
-    
-    // Validate items have stock and selling price does not exceed original price
-    for (const l of body.lines) {
-      if (l.itemId) {
-        const item = await this.itemModel.findOne({ _id: toObjectId(l.itemId), tenantId: tid }).select('name sku price').lean();
-        if (!item) throw new BadRequestException('Item not found');
-        const originalPrice = Number(item.price ?? 0);
-        if (l.unitPrice > originalPrice) {
-          const label = `${item.name} (${item.sku})`;
-          throw new BadRequestException(
-            `Selling price (${l.unitPrice.toFixed(2)}) cannot exceed original price (${originalPrice.toFixed(2)}) for ${label}`,
-          );
+    try {
+      if (!body.lines?.length) throw new BadRequestException('At least one line required');
+      const tid = toObjectId(user.tenantId);
+      if (!tid) throw new BadRequestException('Invalid tenant ID');
+      
+      // Validation loop
+      for (const l of body.lines) {
+        if (l.itemId) {
+          const item = await this.itemModel.findOne({ _id: toObjectId(l.itemId), tenantId: tid }).select('name sku price costPrice').lean();
+          if (!item) throw new BadRequestException('Item not found');
+          const originalPrice = Number(item.price ?? 0);
+          if (Number(l.unitPrice) > originalPrice) {
+            const label = `${item.name} (${item.sku})`;
+            throw new BadRequestException(
+              `Selling price (${Number(l.unitPrice).toFixed(2)}) cannot exceed original price (${originalPrice.toFixed(2)}) for ${label}`,
+            );
+          }
+          const balance = await this.inventory.getBalance(l.itemId, user.tenantId);
+          if (balance < (Number(l.quantity) || 0)) {
+            const label = `${item.name} (${item.sku})`;
+            throw new BadRequestException(`Insufficient stock for ${label}. Available: ${balance}, requested: ${l.quantity}`);
+          }
+        } else if (l.serviceId) {
+          const service = await this.serviceModel.findOne({ _id: toObjectId(l.serviceId), tenantId: tid }).lean();
+          if (!service || !service.isActive) {
+            throw new BadRequestException(`Service not found or inactive`);
+          }
+        } else {
+          throw new BadRequestException('Each line must have either itemId or serviceId');
         }
-        const balance = await this.inventory.getBalance(l.itemId, user.tenantId);
-        if (balance < l.quantity) {
-          const label = `${item.name} (${item.sku})`;
-          throw new BadRequestException(`Insufficient stock for ${label}. Available: ${balance}, requested: ${l.quantity}`);
+      }
+      
+      const saleNumber = await this.nextSaleNumber(user.tenantId);
+      const lines: any[] = [];
+      let totalAmount = 0;
+      
+      for (const l of body.lines) {
+        const qty = Number(l.quantity) || 0;
+        const uPrice = Number(l.unitPrice) || 0;
+        const lineTotal = qty * uPrice;
+        let lineAmountCalculation: number;
+        let unitCost = 0;
+        
+        const line: any = {
+          quantity: qty,
+          unitPrice: uPrice,
+          total: lineTotal,
+        };
+
+        if (l.itemId) {
+          const item = await this.itemModel.findOne({ _id: toObjectId(l.itemId), tenantId: tid }).select('price costPrice').lean();
+          lineAmountCalculation = (Number((item as any)?.price ?? 0)) * qty;
+          unitCost = Math.max(0, Number((item as any)?.costPrice ?? 0));
+          line.itemId = toObjectId(l.itemId);
+          line.unitCost = unitCost;
+        } else {
+          lineAmountCalculation = lineTotal;
+          const service = await this.serviceModel.findOne({ _id: toObjectId(l.serviceId), tenantId: tid }).select('costPrice').lean();
+          line.serviceId = toObjectId(l.serviceId);
+          line.unitCost = Math.max(0, Number((service as any)?.costPrice ?? 0));
         }
-      } else if (l.serviceId) {
-        // Validate service exists and is active
-        const service = await this.serviceModel.findOne({ _id: toObjectId(l.serviceId), tenantId: tid }).lean();
-        if (!service || !service.isActive) {
-          throw new BadRequestException(`Service not found or inactive`);
+        
+        lines.push(line);
+        totalAmount += (lineAmountCalculation || 0);
+      }
+
+      const amountPaid = body.amountPaid != null
+        ? Math.max(0, Math.min(Number(body.amountPaid), totalAmount))
+        : totalAmount;
+
+      const created = await this.saleModel.create({
+        saleNumber,
+        soldAt: new Date(),
+        soldById: toObjectId(user.id),
+        lines,
+        totalAmount: Number(totalAmount) || 0,
+        amountPaid: Number(amountPaid) || 0,
+        customerName: body.customerName,
+        notes: body.notes,
+        paymentMethod: body.paymentMethod || 'cash',
+        tenantId: tid,
+      });
+
+      for (const l of body.lines) {
+        if (l.itemId) {
+          await this.inventory.addMovement(l.itemId, StockMovementType.SALE, Number(l.quantity) || 0, {
+            reference: 'sale',
+            referenceId: created._id.toString(),
+            notes: body.customerName || undefined,
+            performedBy: user,
+          });
         }
-      } else {
-        throw new BadRequestException('Each line must have either itemId or serviceId');
       }
+
+      return this.findOne(created._id.toString(), user.tenantId);
+    } catch (err: any) {
+      console.error('CRITICAL SALE ERROR:', {
+          message: err.message,
+          code: err.code,
+          name: err.name,
+          stack: err.stack,
+      });
+
+      // Special handling for Mongoose validation errors
+      if (err.name === 'ValidationError') {
+          const details = Object.values(err.errors).map((e: any) => e.message).join(', ');
+          throw new BadRequestException(`Validation Error: ${details}`);
+      }
+      
+      // Specifically catch MongoDB duplicate key errors (11000)
+      if (err.code === 11000 || (err.message && err.message.includes('E11000'))) {
+        const key = JSON.stringify(err.keyValue || 'unknown field');
+        throw new BadRequestException(`Duplicate entry detected in database for ${key}. This sale number might already be used. Please refresh and try again.`);
+      }
+
+      // Re-throw Nest exceptions (like BadRequestException)
+      if (err.status && err.getResponse) throw err;
+      
+      // Detailed message for unhandled errors
+      const msg = err.message || String(err);
+      throw new BadRequestException(`Sell request failed: ${msg} | Error Name: ${err.name}`);
     }
-    
-    const saleNumber = await this.nextSaleNumber(user.tenantId);
-    const lines: { itemId?: Types.ObjectId; serviceId?: Types.ObjectId; quantity: number; unitPrice: number; unitCost?: number; total: number }[] = [];
-    let totalAmount = 0;
-    for (const l of body.lines) {
-      const lineTotal = l.quantity * l.unitPrice; // selling price × qty for receipt
-      let lineAmount: number;
-      let unitCost = 0;
-      if (l.itemId) {
-        const item = await this.itemModel.findOne({ _id: toObjectId(l.itemId), tenantId: tid }).select('price costPrice').lean();
-        lineAmount = (Number((item as any)?.price ?? 0)) * l.quantity; // use original price for sale total
-        unitCost = Math.max(0, Number((item as any)?.costPrice ?? 0));
-      } else {
-        lineAmount = lineTotal;
-      }
-      const line: any = {
-        quantity: l.quantity,
-        unitPrice: l.unitPrice,
-        total: lineTotal,
-      };
-      if (l.itemId) {
-        line.itemId = toObjectId(l.itemId);
-        line.unitCost = unitCost;
-      }
-      if (l.serviceId) {
-        const service = await this.serviceModel.findOne({ _id: toObjectId(l.serviceId), tenantId: tid }).select('costPrice').lean();
-        line.serviceId = toObjectId(l.serviceId);
-        line.unitCost = Math.max(0, Number((service as any)?.costPrice ?? 0));
-      }
-      lines.push(line);
-      totalAmount += lineAmount;
-    }
-
-    const amountPaid = body.amountPaid != null
-      ? Math.max(0, Math.min(Number(body.amountPaid), totalAmount))
-      : totalAmount;
-
-    const created = await this.saleModel.create({
-      saleNumber,
-      soldAt: new Date(),
-      soldById: toObjectId(user.id),
-      lines,
-      totalAmount,
-      amountPaid,
-      customerName: body.customerName,
-      notes: body.notes,
-      paymentMethod: body.paymentMethod || 'cash',
-      tenantId: tid,
-    });
-
-    for (const l of body.lines) {
-      if (l.itemId) {
-        await this.inventory.addMovement(l.itemId, StockMovementType.SALE, l.quantity, {
-          reference: 'sale',
-          referenceId: created._id.toString(),
-          notes: body.customerName || undefined,
-          performedBy: user,
-        });
-      }
-    }
-
-    return this.findOne(created._id.toString(), user.tenantId);
   }
 
   async getTodaysSales(tenantId: string) {

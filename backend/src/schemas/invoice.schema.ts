@@ -26,7 +26,7 @@ export class InvoiceDocument extends Document {
   @Prop({ type: Types.ObjectId, ref: 'TenantDocument' })
   tenantId: Types.ObjectId;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   invoiceNumber: string;
 
   @Prop({ type: Types.ObjectId, ref: 'SaleDocument' })
@@ -64,3 +64,4 @@ export class InvoiceDocument extends Document {
 }
 
 export const InvoiceSchema = SchemaFactory.createForClass(InvoiceDocument);
+InvoiceSchema.index({ tenantId: 1, invoiceNumber: 1 }, { unique: true });

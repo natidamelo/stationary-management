@@ -17,16 +17,23 @@ export class InventoryService {
   ) {}
 
   async getBalance(itemId: string, tenantId: string): Promise<number> {
-    const id = toObjectId(itemId);
-    const tid = toObjectId(tenantId);
-    if (!id || !tid) return 0;
-    const docs = await this.movementModel.find({ itemId: id, tenantId: tid }).lean();
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    const iid = toObjectId(itemId);
+    if (!tid || !iid) return 0;
+
+    const docs = await this.movementModel.find({ 
+      itemId: iid, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }]
+    }).lean();
+    
     let balance = 0;
     for (const m of docs) {
-      if (m.type === StockMovementType.PURCHASE || m.type === StockMovementType.RETURN || m.type === 'adjustment')
-        balance += m.quantity;
+      const q = Number(m.quantity) || 0;
+      if (m.type === StockMovementType.PURCHASE || m.type === StockMovementType.RETURN || m.type === StockMovementType.ADJUSTMENT || m.type === 'adjustment')
+        balance += q;
       else
-        balance -= m.quantity;
+        balance -= q;
     }
     return balance;
   }
@@ -133,14 +140,24 @@ export class InventoryService {
   }
 
   async getMovements(tenantId: string, itemId?: string, limit = 50) {
-    const tid = toObjectId(tenantId);
-    if (!tid) return [];
-    const q: any = { tenantId: tid };
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return [];
+    
+    const q: any = { 
+       $or: [{ tenantId: tid }, { tenantId: cleanTenantId }]
+    };
+    
     if (itemId) {
       const iid = toObjectId(itemId);
       if (iid) q.itemId = iid;
     }
-    const docs = await this.movementModel.find(q).populate('itemId').sort({ createdAt: -1 }).limit(limit).lean();
+    
+    const docs = await this.movementModel.find(q)
+      .populate('itemId')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
     return docs.map((d: any) => this.toMovement(d));
   }
 

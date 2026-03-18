@@ -77,12 +77,22 @@ export class ItemsService {
   }
 
   async findAll(tenantId: string, filters?: { categoryId?: string; search?: string }) {
-    const tid = toObjectId(tenantId);
-    if (!tid) return [];
-    const q: any = { 
-      tenantId: tid,
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    
+    // Query for both ObjectId and string version of tenantId to be ultra-safe
+    const q: any = {
+      $or: [
+        { tenantId: tid },
+        { tenantId: cleanTenantId }
+      ],
       isActive: { $ne: false } 
     };
+    
+    // If no valid ID provided, only return those without a tenantId
+    if (!tid && !cleanTenantId) {
+      q.$or = [{ tenantId: null }, { tenantId: '' }, { tenantId: { $exists: false } }];
+    }
     
     const cid = toObjectId(filters?.categoryId);
     if (cid) {
@@ -91,10 +101,16 @@ export class ItemsService {
     
     if (filters?.search?.trim()) {
       const searchRegex = new RegExp(filters.search.trim(), 'i');
-      q.$or = [
-        { name: searchRegex },
-        { sku: searchRegex },
+      q.$and = [
+        { $or: q.$or }, // Retain tenant filter
+        {
+          $or: [
+            { name: searchRegex },
+            { sku: searchRegex },
+          ]
+        }
       ];
+      delete q.$or; // Move it into $and
     }
     
     const docs = await this.model.find(q)
@@ -102,15 +118,20 @@ export class ItemsService {
       .sort({ name: 1 })
       .lean();
       
+    console.log(`[ItemsService] findAll: Found ${docs.length} docs for tenant: "${cleanTenantId}"`);
     return docs.map((d: any) => this.toItem(d)).filter(Boolean);
   }
 
   async findOne(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const iid = toObjectId(id);
     if (!tid || !iid) throw new BadRequestException('Invalid IDs');
 
-    const doc = await this.model.findOne({ _id: iid, tenantId: tid })
+    const doc = await this.model.findOne({ 
+      _id: iid, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }]
+    })
       .populate('categoryId')
       .lean();
     if (!doc) throw new NotFoundException('Item not found');

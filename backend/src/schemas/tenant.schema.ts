@@ -6,7 +6,7 @@ export class TenantDocument extends Document {
   @Prop({ required: true, unique: true })
   name: string;
 
-  @Prop({ default: true })
+  @Prop({ default: false })
   isActive: boolean;
 
   @Prop({ default: Date.now })

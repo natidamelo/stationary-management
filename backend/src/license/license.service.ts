@@ -9,6 +9,7 @@ import { Model, Types } from 'mongoose';
 import { randomBytes } from 'crypto';
 import { LicenseDocument } from '../schemas/license.schema';
 import { CustomerDocument } from '../schemas/customer.schema';
+import { TenantDocument } from '../schemas/tenant.schema';
 import { toObjectId } from '../common/utils';
 
 function formatLicenseKey(raw: string): string {
@@ -26,6 +27,8 @@ export class LicenseService {
     private licenseModel: Model<LicenseDocument>,
     @InjectModel(CustomerDocument.name)
     private customerModel: Model<CustomerDocument>,
+    @InjectModel(TenantDocument.name)
+    private tenantModel: Model<TenantDocument>,
   ) {}
 
   generateKey(): string {
@@ -43,6 +46,10 @@ export class LicenseService {
   } | null> {
     const tid = toObjectId(tenantId);
     if (!tid) return { valid: false, message: 'Invalid tenant ID.' };
+    
+    const tenant = await this.tenantModel.findById(tid).lean();
+    if (!tenant || !tenant.isActive) return { valid: false, message: 'Account is not activated. Please contact the provider.' };
+
     const license = await this.licenseModel
       .findOne({ tenantId: tid, computerId, status: 'active' })
       .populate('customerId')
@@ -87,16 +94,23 @@ export class LicenseService {
   async validateLicense(computerId: string, tenantId: string): Promise<{ valid: boolean; message?: string }> {
     const tid = toObjectId(tenantId);
     if (!tid) return { valid: false, message: 'Invalid tenant context' };
-    // First-time setup: if no licenses exist, allow login (admin can create licenses)
-    const anyLicense = await this.licenseModel.countDocuments({ tenantId: tid }).lean();
-    if (anyLicense === 0) return { valid: true };
 
+    const tenant = await this.tenantModel.findById(tid).lean();
+    if (!tenant) return { valid: false, message: 'Tenant not found.' };
+    if (!tenant.isActive) return { valid: false, message: 'Account is not activated. Please contact the provider.' };
+
+    // Find a valid active license for this computer
     const license = await this.licenseModel
       .findOne({ tenantId: tid, computerId, status: 'active' })
       .lean();
 
     if (!license) {
-      return { valid: false, message: 'No valid license found for this computer.' };
+      // Check if any license exists. If not, inform that a license must be issued.
+      const hasAny = await this.licenseModel.countDocuments({ tenantId: tid }).lean();
+      if (hasAny === 0) {
+        return { valid: false, message: 'This account needs an initial license. Please provide your Computer ID to the dealer.' };
+      }
+      return { valid: false, message: 'No valid license found for this computer. Please provide your Computer ID to the dealer.' };
     }
 
     const now = new Date();

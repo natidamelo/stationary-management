@@ -138,6 +138,10 @@ export class TenantsService {
     }).lean();
     if (existing) throw new BadRequestException('An active license already exists for this computer. Extend or revoke it first.');
 
+    if (!tenant.isActive) {
+      await this.tenantModel.updateOne({ _id: tid }, { $set: { isActive: true } });
+    }
+
     const startDate = new Date();
     let expiryDate: Date;
 

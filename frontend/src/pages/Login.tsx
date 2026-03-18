@@ -8,11 +8,15 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
 import LockRoundedIcon from '@mui/icons-material/LockRounded';
 import InventoryRoundedIcon from '@mui/icons-material/InventoryRounded';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import { Collapse } from '@mui/material';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showComputerId, setShowComputerId] = useState(false);
   const [error, setError] = useState('');
   const { login, computerId } = useAuth();
 
@@ -198,7 +202,7 @@ export default function Login() {
           </Button>
         </form>
 
-        <Box sx={{ mt: 3, textAlign: 'center' }}>
+         <Box sx={{ mt: 3, textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary">
             Don't have an account?{' '}
             <Link component={RouterLink} to="/register" sx={{ fontWeight: 600, color: '#4f46e5', textDecoration: 'none' }}>
@@ -207,24 +211,41 @@ export default function Login() {
           </Typography>
         </Box>
 
-        <Box sx={{ mt: 3, p: 2, bgcolor: '#f9fafb', borderRadius: 2.5, border: '1px solid #f3f4f6' }}>
-          <Typography variant="caption" color="text.secondary" display="block" fontWeight={600} sx={{ mb: 0.5 }}>
-            Computer ID (for license activation)
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" fontFamily="'JetBrains Mono', monospace" sx={{ wordBreak: 'break-all', fontSize: '0.8rem', color: 'text.primary', flex: 1 }}>
-              {computerId}
-            </Typography>
-            <Button
-              size="small"
-              startIcon={<ContentCopyIcon sx={{ fontSize: '0.9rem !important' }} />}
-              onClick={copyComputerId}
-              sx={{ minWidth: 0, px: 1.5, borderRadius: 2, fontSize: '0.75rem', color: '#4f46e5', bgcolor: '#eef2ff', '&:hover': { bgcolor: '#e0e7ff' } }}
-            >
-              Copy
-            </Button>
-          </Box>
+         <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Button
+            size="small"
+            onClick={() => setShowComputerId(!showComputerId)}
+            endIcon={showComputerId ? <KeyboardArrowUpIcon /> : <ExpandMoreIcon />}
+            sx={{
+              color: 'text.secondary',
+              textTransform: 'none',
+              fontWeight: 500,
+              '&:hover': { bgcolor: 'transparent', color: 'primary.main' }
+            }}
+          >
+            {showComputerId ? 'Hide' : 'Show'} Computer ID
+          </Button>
         </Box>
+        <Collapse in={showComputerId}>
+          <Box sx={{ mt: 2, p: 2, bgcolor: '#f9fafb', borderRadius: 2.5, border: '1px solid #f3f4f6' }}>
+            <Typography variant="caption" color="text.secondary" display="block" fontWeight={600} sx={{ mb: 0.5 }}>
+              Computer ID (for license activation)
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" fontFamily="'JetBrains Mono', monospace" sx={{ wordBreak: 'break-all', fontSize: '0.8rem', color: 'text.primary', flex: 1 }}>
+                {computerId}
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<ContentCopyIcon sx={{ fontSize: '0.9rem !important' }} />}
+                onClick={copyComputerId}
+                sx={{ minWidth: 0, px: 1.5, borderRadius: 2, fontSize: '0.75rem', color: '#4f46e5', bgcolor: '#eef2ff', '&:hover': { bgcolor: '#e0e7ff' } }}
+              >
+                Copy
+              </Button>
+            </Box>
+          </Box>
+        </Collapse>
       </Paper>
     </Box>
   );

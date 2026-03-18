@@ -20,53 +20,61 @@ export class SuppliersService {
   }
 
   async create(dto: CreateSupplierDto, tenantId: string) {
-    const tid = toObjectId(tenantId);
-    if (!tid) throw new BadRequestException('Tenant ID is required');
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) throw new BadRequestException('Tenant ID is required');
     const created = await this.model.create({ 
       ...dto,
-      tenantId: tid
+      tenantId: tid || cleanTenantId
     });
     return this.findOne(created._id.toString(), tenantId);
   }
 
   async findAll(tenantId: string) {
-    const tid = toObjectId(tenantId);
-    if (!tid) return [];
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return [];
     const docs = await this.model.find({ 
-      tenantId: tid,
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }],
       isActive: { $ne: false } 
     }).sort({ name: 1 }).lean();
     return docs.map((d: any) => this.toSupp(d));
   }
 
   async findOne(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const sid = toObjectId(id);
-    if (!tid || !sid) throw new BadRequestException('Invalid IDs');
-    const doc = await this.model.findOne({ _id: sid, tenantId: tid }).lean();
+    if (!sid) throw new BadRequestException('Invalid Supplier ID');
+    const doc = await this.model.findOne({ 
+      _id: sid, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }).lean();
     if (!doc) throw new NotFoundException('Supplier not found');
     return this.toSupp(doc);
   }
 
   async update(id: string, dto: UpdateSupplierDto, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const sid = toObjectId(id);
-    if (!tid || !sid) throw new BadRequestException('Invalid IDs');
+    if (!sid) throw new BadRequestException('Invalid Supplier ID');
     await this.findOne(id, tenantId);
     await this.model.updateOne(
-      { _id: sid, tenantId: tid }, 
+      { _id: sid, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] }, 
       { $set: dto }
     );
     return this.findOne(id, tenantId);
   }
 
   async remove(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const sid = toObjectId(id);
-    if (!tid || !sid) throw new BadRequestException('Invalid IDs');
+    if (!sid) throw new BadRequestException('Invalid Supplier ID');
     await this.findOne(id, tenantId);
     await this.model.updateOne(
-      { _id: sid, tenantId: tid }, 
+      { _id: sid, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] }, 
       { $set: { isActive: false } }
     );
     return this.findOne(id, tenantId);

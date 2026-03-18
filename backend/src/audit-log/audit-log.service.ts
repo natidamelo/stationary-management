@@ -21,6 +21,8 @@ export class AuditLogService {
         tenantId?: string;
     }) {
         try {
+            const cleanTenantId = (data.tenantId || '').trim();
+            const tid = toObjectId(cleanTenantId);
             await this.auditModel.create({
                 action: data.action,
                 entity: data.entity,
@@ -28,7 +30,7 @@ export class AuditLogService {
                 changes: data.changes,
                 performedById: toObjectId(data.performedById) || undefined,
                 performedByName: data.performedByName,
-                tenantId: toObjectId(data.tenantId) || undefined,
+                tenantId: tid || cleanTenantId || undefined,
             });
         } catch {
             // Non-critical: never let audit log failures break business logic
@@ -36,10 +38,11 @@ export class AuditLogService {
     }
 
     async findAll(tenantId: string, options?: { entity?: string; limit?: number; skip?: number }) {
-        const tid = toObjectId(tenantId);
-        if (!tid) return { logs: [], total: 0 };
+        const cleanTenantId = (tenantId || '').trim();
+        const tid = toObjectId(cleanTenantId);
+        if (!tid && !cleanTenantId) return { logs: [], total: 0 };
         
-        const filter: Record<string, any> = { tenantId: tid };
+        const filter: any = { $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] };
         if (options?.entity) filter.entity = options.entity;
         
         const [logs, total] = await Promise.all([

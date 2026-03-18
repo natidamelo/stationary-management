@@ -25,14 +25,17 @@ export class SearchService {
     if (!q?.trim() || q.trim().length < 2) {
       return { items: [], suppliers: [], purchaseOrders: [], purchaseRequests: [] };
     }
-    const tid = toObjectId(tenantId);
-    if (!tid) return { items: [], suppliers: [], purchaseOrders: [], purchaseRequests: [] };
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return { items: [], suppliers: [], purchaseOrders: [], purchaseRequests: [] };
     const term = new RegExp(q.trim(), 'i');
+    const filter = { $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] };
+    
     const [items, suppliers, purchaseOrders, purchaseRequests] = await Promise.all([
-      this.itemModel.find({ tenantId: tid, $or: [{ name: term }, { sku: term }] }).populate('categoryId').limit(20).lean(),
-      this.supplierModel.find({ tenantId: tid, $or: [{ name: term }, { contactPerson: term }] }).limit(20).lean(),
-      this.poModel.find({ tenantId: tid, poNumber: term }).populate('supplierId').limit(20).lean(),
-      this.prModel.find({ tenantId: tid, requestNumber: term }).limit(20).lean(),
+      this.itemModel.find({ ...filter, $or: [{ name: term }, { sku: term }] }).populate('categoryId').limit(20).lean(),
+      this.supplierModel.find({ ...filter, $or: [{ name: term }, { contactPerson: term }] }).limit(20).lean(),
+      this.poModel.find({ ...filter, poNumber: term }).populate('supplierId').limit(20).lean(),
+      this.prModel.find({ ...filter, requestNumber: term }).limit(20).lean(),
     ]);
     return {
       items: items.map((d: any) => ({ id: d._id.toString(), ...d, categoryId: d.categoryId?._id?.toString(), category: d.categoryId })),

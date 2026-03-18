@@ -15,9 +15,12 @@ export class DistributionService {
   ) {}
 
   private async nextDistributionNumber(tenantId: string): Promise<string> {
-    const tid = toObjectId(tenantId);
-    if (!tid) return `DIS-${Date.now()}`;
-    const last = await this.model.findOne({ tenantId: tid }).sort({ createdAt: -1 }).lean();
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return `DIS-${Date.now()}`;
+    const last = await this.model.findOne({ 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }).sort({ createdAt: -1 }).lean();
     const num = last ? parseInt(String(last.distributionNumber).replace(/\D/g, ''), 10) + 1 : 1;
     return `DIS-${String(num).padStart(6, '0')}`;
   }
@@ -49,8 +52,9 @@ export class DistributionService {
     body: { issuedToUserId?: string; department?: string; notes?: string; lines: { itemId: string; quantity: number }[] },
     user: { id: string; tenantId: string },
   ) {
-    const tid = toObjectId(user.tenantId);
-    if (!tid) throw new BadRequestException('Invalid tenant ID');
+    const cleanTenantId = (user.tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) throw new BadRequestException('Invalid tenant ID');
     
     const distNumber = await this.nextDistributionNumber(user.tenantId);
     const created = await this.model.create({
@@ -58,7 +62,7 @@ export class DistributionService {
       issuedToUserId: toObjectId(body.issuedToUserId) || undefined,
       department: body.department,
       notes: body.notes,
-      tenantId: tid,
+      tenantId: tid || cleanTenantId,
       lines: body.lines.map((l) => ({ itemId: toObjectId(l.itemId), quantity: l.quantity })),
     });
     for (const l of body.lines) {
@@ -73,19 +77,26 @@ export class DistributionService {
   }
 
   async findAll(tenantId: string) {
-    const tid = toObjectId(tenantId);
-    if (!tid) return [];
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return [];
     
-    const docs = await this.model.find({ tenantId: tid }).populate('issuedToUserId').populate('lines.itemId').sort({ createdAt: -1 }).lean();
+    const docs = await this.model.find({ 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }).populate('issuedToUserId').populate('lines.itemId').sort({ createdAt: -1 }).lean();
     return docs.map((d: any) => this.toDist(d));
   }
 
   async findOne(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const did = toObjectId(id);
-    if (!tid || !did) throw new BadRequestException('Invalid IDs');
+    if (!did) throw new BadRequestException('Invalid Distribution ID');
 
-    const doc = await this.model.findOne({ _id: did, tenantId: tid })
+    const doc = await this.model.findOne({ 
+      _id: did, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    })
       .populate('issuedToUserId').populate('lines.itemId').lean();
     if (!doc) throw new NotFoundException('Distribution not found');
     return this.toDist(doc);

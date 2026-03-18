@@ -18,12 +18,13 @@ export class CustomersService {
     address?: string;
     notes?: string;
   }, tenantId: string) {
-    const tid = toObjectId(tenantId);
-    if (!tid) throw new BadRequestException('Tenant ID is required');
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) throw new BadRequestException('Tenant ID is required');
 
     const existing = await this.customerModel.findOne({ 
       email: data.email.toLowerCase(),
-      tenantId: tid
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }]
     }).lean();
     if (existing) {
       throw new BadRequestException('A customer with this email already exists.');
@@ -34,24 +35,31 @@ export class CustomersService {
       contact: data.contact,
       address: data.address,
       notes: data.notes,
-      tenantId: tid,
+      tenantId: tid || cleanTenantId,
     });
     return this.findById(created._id.toString(), tenantId);
   }
 
   async findAll(tenantId: string) {
-    const tid = toObjectId(tenantId);
-    if (!tid) return [];
-    const docs = await this.customerModel.find({ tenantId: tid }).sort({ createdAt: -1 }).lean();
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return [];
+    const docs = await this.customerModel.find({ 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }).sort({ createdAt: -1 }).lean();
     return docs.map((d: any) => this.toCustomer(d));
   }
 
   async findById(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const cid = toObjectId(id);
-    if (!tid || !cid) throw new BadRequestException('Invalid IDs');
+    if (!cid) throw new BadRequestException('Invalid Customer ID');
     
-    const doc = await this.customerModel.findOne({ _id: cid, tenantId: tid }).lean();
+    const doc = await this.customerModel.findOne({ 
+      _id: cid, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }).lean();
     if (!doc) throw new NotFoundException('Customer not found');
     return this.toCustomer(doc);
   }
@@ -63,35 +71,42 @@ export class CustomersService {
     address: string;
     notes: string;
   }>, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const cid = toObjectId(id);
-    if (!tid || !cid) throw new BadRequestException('Invalid IDs');
+    if (!cid) throw new BadRequestException('Invalid Customer ID');
 
-    const doc = await this.customerModel.findOne({ _id: cid, tenantId: tid }).lean();
+    const doc = await this.customerModel.findOne({ 
+      _id: cid, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }).lean();
     if (!doc) throw new NotFoundException('Customer not found');
     
     if (data.email && data.email !== doc.email) {
       const existing = await this.customerModel.findOne({ 
         email: data.email.toLowerCase(),
-        tenantId: tid
+        $or: [{ tenantId: tid }, { tenantId: cleanTenantId }]
       }).lean();
       if (existing) throw new BadRequestException('A customer with this email already exists.');
     }
     await this.customerModel.updateOne(
-      { _id: cid, tenantId: tid },
+      { _id: cid, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] },
       { $set: { ...data, email: data.email?.toLowerCase(), updatedAt: new Date() } },
     );
     return this.findById(id, tenantId);
   }
 
   async delete(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const cid = toObjectId(id);
-    if (!tid || !cid) throw new BadRequestException('Invalid IDs');
+    if (!cid) throw new BadRequestException('Invalid Customer ID');
 
-    const doc = await this.customerModel.findOne({ _id: cid, tenantId: tid }).lean();
-    if (!doc) throw new NotFoundException('Customer not found');
-    await this.customerModel.deleteOne({ _id: cid, tenantId: tid });
+    await this.findById(id, tenantId);
+    await this.customerModel.deleteOne({ 
+      _id: cid, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    });
     return { success: true };
   }
 

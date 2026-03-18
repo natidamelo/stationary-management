@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 @Schema({ collection: 'categories' })
 export class CategoryDocument extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'TenantDocument' })
+  @Prop({ type: Types.ObjectId, ref: 'TenantDocument', required: true })
   tenantId: Types.ObjectId;
 
   @Prop({ required: true })
@@ -14,4 +14,4 @@ export class CategoryDocument extends Document {
 }
 
 export const CategorySchema = SchemaFactory.createForClass(CategoryDocument);
-CategorySchema.index({ tenantId: 1, name: 1 }, { unique: true });
+CategorySchema.index({ name: 1, tenantId: 1 }, { unique: true, name: 'idx_category_name_tenant_v2' });

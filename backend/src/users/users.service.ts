@@ -106,22 +106,27 @@ export class UsersService {
   }) {
     const role = await this.roleModel.findOne({ name: data.roleName }).lean();
     if (!role) throw new NotFoundException('Role not found');
+    const cleanTenantId = (data.tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    
     const created = await this.userModel.create({
       email: data.email.toLowerCase(),
       passwordHash: data.passwordHash,
       fullName: data.fullName,
       department: data.department,
       roleId: role._id,
-      tenantId: toObjectId(data.tenantId) || undefined,
+      tenantId: tid || cleanTenantId || undefined,
     });
     return this.findById(created._id.toString());
   }
 
   async findAll(tenantId: string) {
-    const tid = toObjectId(tenantId);
-    if (!tid) return [];
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return [];
+    
     const docs = await this.userModel
-      .find({ tenantId: tid })
+      .find({ $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] })
       .populate('roleId')
       .sort({ createdAt: -1 })
       .lean();

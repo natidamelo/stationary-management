@@ -21,9 +21,12 @@ export class PurchaseOrdersService {
   ) {}
 
   private async nextPoNumber(tenantId: string): Promise<string> {
-    const tid = toObjectId(tenantId);
-    if (!tid) return `PO-${Date.now()}`;
-    const last = await this.model.findOne({ tenantId: tid }).sort({ createdAt: -1 }).lean();
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return `PO-${Date.now()}`;
+    const last = await this.model.findOne({ 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }).sort({ createdAt: -1 }).lean();
     const num = last ? parseInt(String(last.poNumber).replace(/\D/g, ''), 10) + 1 : 1;
     return `PO-${String(num).padStart(6, '0')}`;
   }
@@ -57,8 +60,9 @@ export class PurchaseOrdersService {
 
   async create(dto: CreatePurchaseOrderDto, user?: { id: string; tenantId: string }) {
     if (!user?.tenantId) throw new BadRequestException('Tenant ID required');
-    const tid = toObjectId(user.tenantId);
-    if (!tid) throw new BadRequestException('Invalid tenant ID');
+    const cleanTenantId = (user.tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) throw new BadRequestException('Invalid tenant ID');
 
     const poNumber = await this.nextPoNumber(user.tenantId);
     const created = await this.model.create({
@@ -69,7 +73,7 @@ export class PurchaseOrdersService {
       expectedDate: dto.expectedDate ? new Date(dto.expectedDate) : undefined,
       notes: dto.notes,
       createdById: toObjectId(user.id) || undefined,
-      tenantId: tid,
+      tenantId: tid || cleanTenantId,
       lines: (dto.lines || []).map((l) => ({
         itemId: toObjectId(l.itemId),
         quantity: l.quantity,
@@ -81,30 +85,36 @@ export class PurchaseOrdersService {
   }
 
   async findAll(tenantId: string, filters?: { status?: POStatus }) {
-    const tid = toObjectId(tenantId);
-    if (!tid) return [];
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return [];
     
-    const q: any = { tenantId: tid };
+    const q: any = { $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] };
     if (filters?.status) q.status = filters.status;
     const docs = await this.model.find(q).populate('supplierId').populate('lines.itemId').sort({ createdAt: -1 }).lean();
     return docs.map((d: any) => this.toPO(d));
   }
 
   async findOne(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const poId = toObjectId(id);
-    if (!tid || !poId) throw new BadRequestException('Invalid IDs');
+    if (!poId) throw new BadRequestException('Invalid PO ID');
 
-    const doc = await this.model.findOne({ _id: poId, tenantId: tid })
+    const doc = await this.model.findOne({ 
+      _id: poId, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    })
       .populate('supplierId').populate('lines.itemId').lean();
     if (!doc) throw new NotFoundException('Purchase order not found');
     return this.toPO(doc);
   }
 
   async update(id: string, tenantId: string, dto: UpdatePurchaseOrderDto) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const poId = toObjectId(id);
-    if (!tid || !poId) throw new BadRequestException('Invalid IDs');
+    if (!poId) throw new BadRequestException('Invalid PO ID');
 
     const po = await this.findOne(id, tenantId);
     if (!po || po.status !== POStatus.DRAFT) throw new BadRequestException('Only draft POs can be edited');
@@ -122,35 +132,43 @@ export class PurchaseOrdersService {
         receivedQuantity: 0,
       }));
     }
-    await this.model.updateOne({ _id: poId, tenantId: tid }, { $set: update });
+    await this.model.updateOne({ 
+      _id: poId, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }, { $set: update });
     return this.findOne(id, tenantId);
   }
 
   async send(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const poId = toObjectId(id);
-    if (!tid || !poId) throw new BadRequestException('Invalid IDs');
+    if (!poId) throw new BadRequestException('Invalid PO ID');
 
     const po = await this.findOne(id, tenantId);
     if (!po || po.status !== POStatus.DRAFT) throw new BadRequestException('Only draft POs can be sent');
     
     await this.model.updateOne(
-      { _id: poId, tenantId: tid }, 
+      { _id: poId, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] }, 
       { $set: { status: POStatus.SENT } }
     );
     return this.findOne(id, tenantId);
   }
 
   async receive(id: string, tenantId: string, body: { lines: { lineId: string; receivedQuantity: number }[] }, user: { id: string; tenantId: string }) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const poId = toObjectId(id);
-    if (!tid || !poId) throw new BadRequestException('Invalid IDs');
+    if (!poId) throw new BadRequestException('Invalid PO ID');
 
     const po = await this.findOne(id, tenantId);
     if (!po || (po.status !== POStatus.SENT && po.status !== POStatus.RECEIVED))
       throw new BadRequestException('PO must be in sent/received state');
 
-    const doc = await this.model.findOne({ _id: poId, tenantId: tid }).lean();
+    const doc = await this.model.findOne({ 
+      _id: poId, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }).lean();
     if (!doc) throw new NotFoundException('Purchase order not found');
     
     const lines = (doc as any).lines || [];
@@ -170,20 +188,24 @@ export class PurchaseOrdersService {
       }
       lines[idx] = { ...line, receivedQuantity };
     }
-    await this.model.updateOne({ _id: poId, tenantId: tid }, { $set: { lines, status: POStatus.RECEIVED } });
+    await this.model.updateOne({ 
+      _id: poId, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }, { $set: { lines, status: POStatus.RECEIVED } });
     return this.findOne(id, tenantId);
   }
 
   async close(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const poId = toObjectId(id);
-    if (!tid || !poId) throw new BadRequestException('Invalid IDs');
+    if (!poId) throw new BadRequestException('Invalid PO ID');
 
     const po = await this.findOne(id, tenantId);
     if (!po || po.status === POStatus.CLOSED) throw new BadRequestException('PO already closed');
     
     await this.model.updateOne(
-      { _id: poId, tenantId: tid }, 
+      { _id: poId, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] }, 
       { $set: { status: POStatus.CLOSED } }
     );
     return this.findOne(id, tenantId);

@@ -19,9 +19,12 @@ export class PurchaseRequestsService {
   ) {}
 
   private async nextRequestNumber(tenantId: string): Promise<string> {
-    const tid = toObjectId(tenantId);
-    if (!tid) return `PR-${Date.now()}`;
-    const last = await this.model.findOne({ tenantId: tid }).sort({ createdAt: -1 }).lean();
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return `PR-${Date.now()}`;
+    const last = await this.model.findOne({ 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    }).sort({ createdAt: -1 }).lean();
     const num = last ? parseInt(String(last.requestNumber).replace(/\D/g, ''), 10) + 1 : 1;
     return `PR-${String(num).padStart(6, '0')}`;
   }
@@ -55,15 +58,16 @@ export class PurchaseRequestsService {
   }
 
   async create(dto: CreatePurchaseRequestDto, user: { id: string; tenantId: string }) {
-    const tid = toObjectId(user.tenantId);
-    if (!tid) throw new BadRequestException('Tenant ID required');
+    const cleanTenantId = (user.tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) throw new BadRequestException('Tenant ID required');
     
     const requestNumber = await this.nextRequestNumber(user.tenantId);
     const created = await this.model.create({
       requestNumber,
       status: RequestStatus.DRAFT,
       requestedById: toObjectId(user.id),
-      tenantId: tid,
+      tenantId: tid || cleanTenantId,
       lines: dto.lines.map((l) => ({
         itemId: toObjectId(l.itemId),
         quantity: Number(l.quantity) || 1,
@@ -74,26 +78,28 @@ export class PurchaseRequestsService {
   }
 
   async submit(id: string, user: { id: string; tenantId: string }) {
-    const tid = toObjectId(user.tenantId);
+    const cleanTenantId = (user.tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const prId = toObjectId(id);
-    if (!tid || !prId) throw new BadRequestException('Invalid IDs');
+    if (!prId) throw new BadRequestException('Invalid Request ID');
 
     const pr = await this.findOne(id, user.tenantId);
     if (!pr || pr.requestedById !== user.id) throw new ForbiddenException('Not your request');
     if (pr.status !== RequestStatus.DRAFT) throw new BadRequestException('Only draft requests can be submitted');
     
     await this.model.updateOne(
-      { _id: prId, tenantId: tid }, 
+      { _id: prId, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] }, 
       { $set: { status: RequestStatus.PENDING } }
     );
     return this.findOne(id, user.tenantId);
   }
 
   async findAll(tenantId: string, filters?: { status?: RequestStatus; requestedBy?: string }) {
-    const tid = toObjectId(tenantId);
-    if (!tid) return [];
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return [];
     
-    const q: any = { tenantId: tid };
+    const q: any = { $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] };
     if (filters?.status) q.status = filters.status;
     if (filters?.requestedBy) q.requestedById = toObjectId(filters.requestedBy);
     
@@ -102,41 +108,47 @@ export class PurchaseRequestsService {
   }
 
   async findOne(id: string, tenantId: string) {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const prId = toObjectId(id);
-    if (!tid || !prId) throw new BadRequestException('Invalid IDs');
+    if (!prId) throw new BadRequestException('Invalid Request ID');
 
-    const doc = await this.model.findOne({ _id: prId, tenantId: tid })
+    const doc = await this.model.findOne({ 
+      _id: prId, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    })
       .populate('requestedById').populate('approvedById').populate('lines.itemId').lean();
     if (!doc) throw new NotFoundException('Purchase request not found');
     return this.toPR(doc);
   }
 
   async approve(id: string, user: { id: string; tenantId: string }) {
-    const tid = toObjectId(user.tenantId);
+    const cleanTenantId = (user.tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const prId = toObjectId(id);
-    if (!tid || !prId) throw new BadRequestException('Invalid IDs');
+    if (!prId) throw new BadRequestException('Invalid Request ID');
 
     const pr = await this.findOne(id, user.tenantId);
     if (!pr || pr.status !== RequestStatus.PENDING) throw new BadRequestException('Only pending requests can be approved');
     
     await this.model.updateOne(
-      { _id: prId, tenantId: tid },
+      { _id: prId, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] },
       { $set: { status: RequestStatus.APPROVED, approvedById: toObjectId(user.id), approvedAt: new Date() }, $unset: { rejectionReason: 1 } },
     );
     return this.findOne(id, user.tenantId);
   }
 
   async reject(id: string, user: { id: string; tenantId: string }, reason: string) {
-    const tid = toObjectId(user.tenantId);
+    const cleanTenantId = (user.tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const prId = toObjectId(id);
-    if (!tid || !prId) throw new BadRequestException('Invalid IDs');
+    if (!prId) throw new BadRequestException('Invalid Request ID');
 
     const pr = await this.findOne(id, user.tenantId);
     if (!pr || pr.status !== RequestStatus.PENDING) throw new BadRequestException('Only pending requests can be rejected');
     
     await this.model.updateOne(
-      { _id: prId, tenantId: tid },
+      { _id: prId, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] },
       { $set: { status: RequestStatus.REJECTED, approvedById: toObjectId(user.id), approvedAt: new Date(), rejectionReason: reason } },
     );
     return this.findOne(id, user.tenantId);

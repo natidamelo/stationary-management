@@ -15,11 +15,12 @@ export class InvoicesService {
   ) { }
 
   private async nextInvoiceNumber(tenantId: string): Promise<string> {
-    const tid = toObjectId(tenantId);
-    if (!tid) return `INV-${Date.now()}`;
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return `INV-${Date.now()}`;
     
     const last = await this.invoiceModel
-      .findOne({ tenantId: tid })
+      .findOne({ $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] })
       .sort({ createdAt: -1 })
       .lean();
       
@@ -61,10 +62,11 @@ export class InvoicesService {
   }
 
   async findAll(tenantId: string): Promise<any[]> {
-    const tid = toObjectId(tenantId);
-    if (!tid) return [];
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return [];
     const docs = await this.invoiceModel
-      .find({ tenantId: tid })
+      .find({ $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] })
       .populate('saleId', 'saleNumber soldAt totalAmount amountPaid')
       .sort({ issueDate: -1 })
       .lean();
@@ -72,11 +74,12 @@ export class InvoicesService {
   }
 
   async findOne(id: string, tenantId: string): Promise<any> {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const iid = toObjectId(id);
-    if (!tid || !iid) return null;
+    if (!iid) return null;
     const doc = await this.invoiceModel
-      .findOne({ _id: iid, tenantId: tid })
+      .findOne({ _id: iid, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] })
       .populate('saleId', 'saleNumber soldAt totalAmount amountPaid')
       .lean();
     return this.toInvoice(doc);
@@ -84,19 +87,24 @@ export class InvoicesService {
 
   async createFromSale(saleId: string, tenantId: string, options?: { customerEmail?: string; customerAddress?: string }): Promise<any> {
     try {
-      const tid = toObjectId(tenantId);
+      const cleanTenantId = (tenantId || '').trim();
+      const tid = toObjectId(cleanTenantId);
       const sid = toObjectId(saleId);
-      if (!tid || !sid) throw new BadRequestException('Invalid IDs for invoice');
+      if (!tid && !cleanTenantId) throw new BadRequestException('Invalid tenant ID');
+      if (!sid) throw new BadRequestException('Invalid Sale ID');
 
       const sale = await this.saleModel
-        .findOne({ _id: sid, tenantId: tid })
+        .findOne({ _id: sid, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] })
         .populate('lines.itemId')
         .populate('lines.serviceId')
         .lean();
         
       if (!sale) throw new BadRequestException(`Sale not found with ID: ${saleId}`);
       
-      const existing = await this.invoiceModel.findOne({ saleId: sid, tenantId: tid }).lean();
+      const existing = await this.invoiceModel.findOne({ 
+        saleId: sid, 
+        $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+      }).lean();
       if (existing) {
         return this.findOne(existing._id.toString(), tenantId);
       }
@@ -126,7 +134,7 @@ export class InvoicesService {
         amountPaid,
         status: amountPaid >= totalAmount ? 'paid' : 'sent',
         notes: o.notes,
-        tenantId: tid,
+        tenantId: tid || cleanTenantId,
       });
 
       return this.findOne(created._id.toString(), tenantId);
@@ -138,15 +146,19 @@ export class InvoicesService {
   }
 
   async markPaid(id: string, tenantId: string, amountPaid?: number): Promise<any> {
-    const tid = toObjectId(tenantId);
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
     const iid = toObjectId(id);
-    if (!tid || !iid) throw new BadRequestException('Invalid IDs');
+    if (!iid) throw new BadRequestException('Invalid Invoice ID');
 
-    const doc = await this.invoiceModel.findOne({ _id: iid, tenantId: tid });
+    const doc = await this.invoiceModel.findOne({ 
+      _id: iid, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    });
     if (!doc) throw new BadRequestException('Invoice not found');
     const paid = amountPaid !== undefined ? amountPaid : doc.totalAmount;
     await this.invoiceModel.updateOne(
-      { _id: iid, tenantId: tid },
+      { _id: iid, $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] },
       { $set: { amountPaid: paid, status: paid >= doc.totalAmount ? 'paid' : 'partial' } },
     );
     return this.findOne(id, tenantId);

@@ -111,10 +111,12 @@ function TenantRow({
   tenant,
   onDelete,
   onGiveLicense,
+  onToggleStatus,
 }: {
   tenant: Tenant;
   onDelete: (t: Tenant) => void;
   onGiveLicense: (t: Tenant) => void;
+  onToggleStatus: (t: Tenant) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -173,11 +175,15 @@ function TenantRow({
           </Box>
         </TableCell>
         <TableCell>
-          <Chip
-            label={tenant.isActive ? 'Active' : 'Inactive'}
-            size="small"
-            color={tenant.isActive ? 'success' : 'error'}
-          />
+          <Tooltip title={tenant.isActive ? "Click to deactivate tenant" : "Click to activate tenant"}>
+            <Chip
+              label={tenant.isActive ? 'Active' : 'Inactive'}
+              size="small"
+              color={tenant.isActive ? 'success' : 'error'}
+              onClick={() => onToggleStatus(tenant)}
+              sx={{ cursor: 'pointer', transition: 'all 0.2s', '&:hover': { opacity: 0.8, transform: 'scale(1.05)' } }}
+            />
+          </Tooltip>
         </TableCell>
         <TableCell align="right">
           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
@@ -271,6 +277,15 @@ export default function RegisteredTenants() {
     }
   };
 
+  const handleToggleStatus = async (t: Tenant) => {
+    try {
+      await api.patch(`/tenants/${t.id}`, { isActive: !t.isActive });
+      fetchTenants();
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Failed to update tenant status');
+    }
+  };
+
   const handleGiveLicense = async () => {
     if (!licenseTarget) return;
     setLicenseLoading(true);
@@ -350,6 +365,7 @@ export default function RegisteredTenants() {
                   tenant={t}
                   onDelete={setDeleteTarget}
                   onGiveLicense={openLicenseDialog}
+                  onToggleStatus={handleToggleStatus}
                 />
               ))}
             </TableBody>

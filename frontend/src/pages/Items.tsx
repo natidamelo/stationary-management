@@ -59,6 +59,9 @@ export default function Items() {
   const [printDialog, setPrintDialog] = useState(false);
   const [printCount, setPrintCount] = useState(20);
   const [itemToPrint, setItemToPrint] = useState<Item | null>(null);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportCsv = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -260,21 +263,29 @@ export default function Items() {
     load();
   };
 
-  const handleDeleteItem = async (item: Item) => {
-    console.log('[Items] Attempting to delete item:', item);
-    if (!window.confirm(`Are you sure you want to delete "${item.name}" (${item.sku})?`)) {
-      return;
-    }
+  const handleDeleteItem = (item: Item) => {
+    console.log('[Items] Opening delete modal for:', item);
+    setItemToDelete(item);
+    setDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    setDeleting(true);
     try {
-      console.log('[Items] Calling delete API for:', item.id);
-      await api.delete(`/items/${item.id}`);
+      console.log('[Items] Calling delete API for:', itemToDelete.id);
+      await api.delete(`/items/${itemToDelete.id}`);
       console.log('[Items] Delete successful');
+      setDeleteModal(false);
+      setItemToDelete(null);
       await load();
-      alert(`Item "${item.name}" deleted successfully.`);
+      alert(`Item deleted successfully.`);
     } catch (err: any) {
       console.error('[Items] Failed to delete item:', err);
       const msg = err.response?.data?.message || 'Failed to delete item';
       alert(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -445,6 +456,30 @@ export default function Items() {
           <Button onClick={() => setPrintDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleDoPrint}>
             Print {printCount} Copies
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteModal} onClose={() => !deleting && setDeleteModal(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ color: 'error.main', fontWeight: 700 }}>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 1, mb: 2 }}>
+            Are you sure you want to delete <strong>{itemToDelete?.name}</strong> ({itemToDelete?.sku})?
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            This will hide the item from current inventory lists, but it will remain in historical records of sales and distributions.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteModal(false)} disabled={deleting}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={confirmDelete} 
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting...' : 'Delete Item'}
           </Button>
         </DialogActions>
       </Dialog>

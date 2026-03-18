@@ -108,6 +108,9 @@ export default function StockManagement() {
   const [editStockForm, setEditStockForm] = useState({ itemId: '', quantity: 0, costPrice: 0, sellPrice: 0, reorderLevel: 0 });
   const [printCount, setPrintCount] = useState(1);
   const [itemToPrint, setItemToPrint] = useState<StockItem | null>(null);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<StockItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const printBarcode = (item: StockItem, count: number = 1) => {
@@ -435,31 +438,32 @@ export default function StockManagement() {
     }
   };
 
-  const handleDeleteItem = async (item: StockItem) => {
-    console.log('[StockManagement] Attempting to delete item:', item);
-    if (!item.id) {
-      console.error('[StockManagement] Item ID is missing', item);
-      alert('Error: Item ID is missing.');
-      return;
-    }
+  const handleDeleteItem = (item: StockItem) => {
+    console.log('[StockManagement] Opening delete modal for:', item);
+    setItemToDelete(item);
+    setDeleteModal(true);
+  };
 
-    const confirmMsg = `Are you sure you want to delete "${item.name}" (${item.sku})?\n\nThis will hide the item from the system but preserve its history.`;
-    if (!window.confirm(confirmMsg)) {
-      return;
-    }
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
     
+    setDeleting(true);
     try {
-      console.log('[StockManagement] Calling delete API for:', item.id);
-      await api.delete(`/items/${item.id}`);
+      console.log('[StockManagement] Calling delete API for:', itemToDelete.id);
+      await api.delete(`/items/${itemToDelete.id}`);
       console.log('[StockManagement] Delete successful');
+      setDeleteModal(false);
+      setItemToDelete(null);
       await loadData();
-      alert(`Item "${item.name}" deleted successfully.`);
+      alert(`Item deleted successfully.`);
     } catch (e: any) {
       console.error('[StockManagement] Failed to delete item:', e);
       const msg = e.response?.data?.message;
       const errorStr = Array.isArray(msg) ? msg.join(', ') : (msg || 'Failed to delete item.');
       setError(errorStr);
       alert('Failed to delete item: ' + errorStr);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -1211,6 +1215,30 @@ export default function StockManagement() {
           <Button onClick={() => setPrintDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleDoPrint}>
             Print {printCount} Copies
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteModal} onClose={() => !deleting && setDeleteModal(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ color: 'error.main', fontWeight: 700 }}>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 1, mb: 2 }}>
+            Are you sure you want to delete <strong>{itemToDelete?.name}</strong> ({itemToDelete?.sku})?
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            This will hide the item from current stock and inventory lists, but it will remain in historical records (like previous sales and distributions).
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteModal(false)} disabled={deleting}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={confirmDelete} 
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting...' : 'Delete Item'}
           </Button>
         </DialogActions>
       </Dialog>

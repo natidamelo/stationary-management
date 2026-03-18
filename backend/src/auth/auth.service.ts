@@ -50,13 +50,7 @@ export class AuthService {
       try {
         const licenseCheck = await this.licenseService.validateLicense(dto.computerId, tenantId);
         if (!licenseCheck.valid) {
-          const isProduction = process.env.NODE_ENV === 'production';
-          if (!isProduction) {
-            // In development, allow login so you can add a license for this computer from the app.
-            license = { expiryDate: undefined, startDate: undefined, customerName: undefined } as any;
-          } else {
-            throw new UnauthorizedException(licenseCheck.message || 'License validation failed');
-          }
+          throw new UnauthorizedException(licenseCheck.message || 'License validation failed');
         } else {
           const info = await this.licenseService.getLicenseInfo(dto.computerId, tenantId);
           license = info

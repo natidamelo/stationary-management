@@ -126,6 +126,7 @@ export default function Users() {
       if (editingUser) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { password, ...updateData } = formData;
+        // Ensure no leading slash to avoid absolute path joining issues in axios if baseURL is tricky
         await api.patch(`/users/${editingUser.id}`, updateData);
       } else {
         await api.post('/users', formData);
@@ -133,7 +134,9 @@ export default function Users() {
       handleClose();
       fetchUsers();
     } catch (err: any) {
-      setError(err.response?.data?.message || `Failed to ${editingUser ? 'update' : 'create'} user`);
+      // If error is just a string (common for Nest 404s before they reach our filter), show it.
+      const errorMsg = err.response?.data?.message || err.response?.data || `Failed to ${editingUser ? 'update' : 'create'} user`;
+      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
     } finally {
       setSubmitting(false);
     }
@@ -352,6 +355,7 @@ export default function Users() {
                 label="Full Name"
                 fullWidth
                 required
+                autoComplete="name"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
               />
@@ -360,6 +364,7 @@ export default function Users() {
                 type="email"
                 fullWidth
                 required
+                autoComplete="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
@@ -369,6 +374,7 @@ export default function Users() {
                   type="password"
                   fullWidth
                   required
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   helperText="Minimum 6 characters"
@@ -377,6 +383,7 @@ export default function Users() {
               <TextField
                 label="Department"
                 fullWidth
+                autoComplete="organization-unit"
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
               />
@@ -429,6 +436,7 @@ export default function Users() {
               type="password"
               fullWidth
               required
+              autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               helperText="Minimum 6 characters"

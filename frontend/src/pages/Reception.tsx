@@ -26,8 +26,21 @@ import {
   DialogActions,
   IconButton,
   InputAdornment,
+  Autocomplete,
+  Avatar,
+  ListItemText,
+  Chip,
+  Fade,
+  Tooltip,
 } from '@mui/material';
-import { QrCodeScanner as QrCodeScannerIcon } from '@mui/icons-material';
+import { 
+  QrCodeScanner as QrCodeScannerIcon,
+  Search as SearchIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  ShoppingBag as ShoppingBagIcon,
+  Bolt as BoltIcon,
+} from '@mui/icons-material';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { DecodeHintType, BarcodeFormat } from '@zxing/library';
 import { useNavigate } from 'react-router-dom';
@@ -71,8 +84,9 @@ type Line = {
 
 export default function Reception() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
-  const [items, setItems] = useState<Array<{ id: string; name: string; sku: string; price: number; barcode?: string }>>([]);
+  const [items, setItems] = useState<Array<{ id: string; name: string; sku: string; price: number; barcode?: string; category?: { id: string; name: string }; imageUrl?: string }>>([]);
   const [services, setServices] = useState<Array<{ id: string; name: string; sellingPrice: number; price?: number }>>([]);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [selling, setSelling] = useState(false);
   const [lines, setLines] = useState<Line[]>([{ type: 'item', itemId: '', quantity: 1, unitPrice: 0 }]);
@@ -98,6 +112,7 @@ export default function Reception() {
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const navigate = useNavigate();
   const [creatingInvoiceId, setCreatingInvoiceId] = useState<string | null>(null);
+  const [searchValue, setSearchValue] = useState<any>(null);
 
   const load = () => {
     api.get<Dashboard>('/reception/dashboard').then((r) => setDashboard(r.data)).catch(() => setLoading(false));
@@ -106,8 +121,9 @@ export default function Reception() {
   useEffect(() => {
     Promise.all([
       api.get<Dashboard>('/reception/dashboard').then((r) => setDashboard(r.data)),
-      api.get<Array<{ id: string; name: string; sku: string; price: number; barcode?: string }>>('/items').then((r) => setItems(r.data)),
-      api.get<Array<{ id: string; name: string; sellingPrice: number; price?: number }>>('/services').then((r) => setServices(r.data)),
+      api.get<Array<any>>('/items').then((r) => setItems(r.data)),
+      api.get<Array<any>>('/services').then((r) => setServices(r.data)),
+      api.get<Array<{ id: string; name: string }>>('/categories').then((r) => setCategories(r.data)),
     ]).catch(() => {})
       .finally(() => setLoading(false));
 
@@ -497,6 +513,56 @@ export default function Reception() {
 
   const addLine = (type: 'item' | 'service' = 'item') => setLines((p) => [...p, { type, itemId: type === 'item' ? '' : undefined, serviceId: type === 'service' ? '' : undefined, quantity: 1, unitPrice: 0 }]);
 
+  const handleSelectItem = (target: any) => {
+    if (!target) return;
+    
+    const type = target.type as 'item' | 'service';
+    const id = target.id;
+    
+    setLines((prev) => {
+      const existingIdx = prev.findIndex(l => (type === 'item' ? l.itemId === id : l.serviceId === id));
+      if (existingIdx >= 0) {
+        return prev.map((l, i) => i === existingIdx ? { ...l, quantity: l.quantity + 1 } : l);
+      }
+      
+      const newLine: Line = {
+        type,
+        itemId: type === 'item' ? id : undefined,
+        serviceId: type === 'service' ? id : undefined,
+        quantity: 1,
+        unitPrice: Number(target.price || target.sellingPrice || 0)
+      };
+      
+      // If the last line is empty and of same type, replace it
+      const lastLine = prev[prev.length - 1];
+      const isEmpty = lastLine && !lastLine.itemId && !lastLine.serviceId;
+      
+      if (isEmpty) {
+        return [...prev.slice(0, -1), newLine];
+      }
+      
+      return [...prev, newLine];
+    });
+  };
+
+  // Combine items and services for search
+  const searchableOptions = [
+    ...items.map(i => ({ 
+      ...i, 
+      type: 'item' as const, 
+      label: `${i.name} (${i.sku})`,
+      categoryName: i.category?.name || 'Uncategorized',
+      searchString: `${i.name} ${i.sku} ${i.category?.name || ''}`.toLowerCase()
+    })),
+    ...services.map(s => ({ 
+      ...s, 
+      type: 'service' as const, 
+      label: s.name,
+      categoryName: 'Services',
+      searchString: `${s.name} service`.toLowerCase()
+    }))
+  ];
+
   // Sale total = original price for items (so partial payment balance is correct), selling price for services
   const computedTotal = lines.reduce((sum, l) => {
     if (!((l.type === 'item' && l.itemId) || (l.type === 'service' && l.serviceId)) || l.quantity <= 0) return sum;
@@ -598,12 +664,23 @@ export default function Reception() {
                 onKeyPress={handleBarcodeKeyPress}
                 inputRef={barcodeInputRef}
                 fullWidth 
-                sx={{ mb: 2 }}
+                variant="filled"
+                sx={{ 
+                  mb: 2,
+                  '& .MuiFilledInput-root': {
+                    backgroundColor: 'rgba(79, 70, 229, 0.04)',
+                    borderRadius: 3,
+                    border: '1px solid rgba(79, 70, 229, 0.08)',
+                    '&:hover': { backgroundColor: 'rgba(79, 70, 229, 0.08)' },
+                    '&.Mui-focused': { backgroundColor: 'rgba(79, 70, 229, 0.08)', borderColor: 'rgba(79, 70, 229, 0.3)' },
+                    '&:before, &:after': { display: 'none' }
+                  }
+                }}
                 placeholder="Scan or enter barcode"
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton edge="end" onClick={() => setCameraOpen(true)}>
+                      <IconButton edge="end" onClick={() => setCameraOpen(true)} color="primary">
                         <QrCodeScannerIcon />
                       </IconButton>
                     </InputAdornment>
@@ -616,81 +693,214 @@ export default function Reception() {
                     : 'Use a barcode scanner or tap the icon to scan with camera'
                 }
               />
-              <TextField label="Customer name (optional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} fullWidth sx={{ mb: 2 }} />
-              {lines.map((line, idx) => (
-                <Box key={idx} sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <Select
-                    size="small"
-                    value={line.type}
-                    onChange={(e) => {
-                      const newType = e.target.value as 'item' | 'service';
-                      setLines((p) => p.map((l, i) => 
-                        i === idx 
-                          ? { type: newType, itemId: newType === 'item' ? '' : undefined, serviceId: newType === 'service' ? '' : undefined, quantity: l.quantity, unitPrice: 0 }
-                          : l
-                      ));
-                    }}
-                    sx={{ minWidth: 100 }}
-                  >
-                    <MenuItem value="item">Item</MenuItem>
-                    <MenuItem value="service">Service</MenuItem>
-                  </Select>
-                  {line.type === 'item' ? (
-                    <Select
-                      size="small"
-                      value={line.itemId || ''}
-                      onChange={(e) => {
-                        const item = items.find((i) => i.id === e.target.value);
-                        setLines((p) => p.map((l, i) => (i === idx ? { ...l, itemId: e.target.value, unitPrice: item ? Number(item.price) : 0 } : l)));
-                      }}
-                      displayEmpty
-                      sx={{ minWidth: 220, flex: '2 1 200px' }}
-                    >
-                      <MenuItem value="">Select item</MenuItem>
-                      {items.map((i) => (
-                        <MenuItem key={i.id} value={i.id}>{i.sku} – {i.name}</MenuItem>
-                      ))}
-                    </Select>
-                  ) : (
-                    <Select
-                      size="small"
-                      value={line.serviceId || ''}
-                      onChange={(e) => {
-                        const service = services.find((s) => s.id === e.target.value);
-                        setLines((p) => p.map((l, i) => (i === idx ? { ...l, serviceId: e.target.value, unitPrice: service ? Number(service.sellingPrice || service.price || 0) : 0 } : l)));
-                      }}
-                      displayEmpty
-                      sx={{ minWidth: 220, flex: '2 1 200px' }}
-                    >
-                      <MenuItem value="">Select service</MenuItem>
-                      {services.map((s) => (
-                        <MenuItem key={s.id} value={s.id}>
-                          {s.name} - {(s.sellingPrice || s.price || 0).toFixed(2)}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  )}
-                  <TextField type="number" size="small" value={line.quantity} onChange={(e) => setLines((p) => p.map((l, i) => (i === idx ? { ...l, quantity: Number(e.target.value) } : l)))} inputProps={{ min: 1 }} sx={{ width: 70 }} />
+
+              <Autocomplete
+                fullWidth
+                options={searchableOptions}
+                groupBy={(option) => option.categoryName}
+                getOptionLabel={(option) => option.label}
+                value={searchValue}
+                filterOptions={(options, { inputValue }) => {
+                  const query = inputValue.toLowerCase();
+                  return options.filter(o => o.searchString.includes(query));
+                }}
+                onChange={(_, value) => {
+                  if (value) {
+                    handleSelectItem(value);
+                    setSearchValue(null);
+                  }
+                }}
+                PaperComponent={(props) => (
+                  <Paper {...props} elevation={12} sx={{ 
+                    borderRadius: 3, 
+                    mt: 1, 
+                    overflow: 'hidden',
+                    border: '1px solid rgba(79, 70, 229, 0.1)',
+                    backdropFilter: 'blur(10px)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                  }} />
+                )}
+                renderInput={(params) => (
                   <TextField
-                    type="number"
-                    size="small"
-                    value={line.unitPrice || ''}
-                    onChange={(e) => {
-                      const raw = Number(e.target.value);
-                      setLines((p) => p.map((l, i) => (i === idx ? { ...l, unitPrice: raw } : l)));
+                    {...params}
+                    label="Search Item or Category"
+                    placeholder="Type first letter to see products..."
+                    variant="outlined"
+                    sx={{ 
+                      mb: 3,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 3,
+                        backgroundColor: 'rgba(79, 70, 229, 0.02)',
+                        transition: 'all 0.2s ease',
+                        '& fieldset': { borderColor: 'rgba(79, 70, 229, 0.15)' },
+                        '&:hover fieldset': { borderColor: 'rgba(79, 70, 229, 0.3)' },
+                        '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: 2 },
+                      }
                     }}
-                    placeholder="Price"
-                    inputProps={{
-                      min: 0,
-                      step: 0.01,
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon color="primary" />
+                        </InputAdornment>
+                      ),
                     }}
-                    sx={{ width: 90 }}
                   />
-                </Box>
-              ))}
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <Button size="small" onClick={() => addLine('item')}>+ Item</Button>
-                <Button size="small" onClick={() => addLine('service')}>+ Service</Button>
+                )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props} key={option.id} sx={{ px: 2, py: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                      <Avatar 
+                        src={option.type === 'item' ? option.imageUrl : undefined} 
+                        variant="rounded"
+                        sx={{ bgcolor: option.type === 'item' ? 'primary.light' : 'secondary.light', width: 40, height: 40 }}
+                      >
+                        {option.type === 'item' ? <ShoppingBagIcon /> : <BoltIcon />}
+                      </Avatar>
+                      <ListItemText 
+                        primary={option.name}
+                        secondary={option.type === 'item' ? `SKU: ${option.sku} • ${Number(option.price).toFixed(2)} birr` : `Service • ${Number(option.sellingPrice || option.price || 0).toFixed(2)} birr`}
+                        primaryTypographyProps={{ fontWeight: 600 }}
+                      />
+                      {option.type === 'item' && option.categoryName !== 'Uncategorized' && (
+                        <Chip label={option.categoryName} size="small" variant="outlined" sx={{ ml: 'auto' }} />
+                      )}
+                    </Box>
+                  </Box>
+                )}
+              />
+
+              <TextField label="Customer name (optional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} fullWidth sx={{ mb: 2 }} variant="standard" />
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, mt: 1 }}>
+                <Typography variant="subtitle2" color="text.secondary" fontWeight={600}>Order Items</Typography>
+                <Button 
+                  size="small" 
+                  color="error" 
+                  onClick={() => setLines([{ type: 'item', itemId: '', quantity: 1, unitPrice: 0 }])}
+                  startIcon={<DeleteIcon />}
+                  disabled={lines.length === 1 && !lines[0].itemId && !lines[0].serviceId}
+                >
+                  Clear All
+                </Button>
+              </Box>
+
+              <Box sx={{ minHeight: 100, maxHeight: 400, overflowY: 'auto', pr: 1, mb: 2 }}>
+                {lines.map((line, idx) => (
+                  <Fade in key={idx}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      gap: 1, 
+                      mb: 1.5, 
+                      flexWrap: 'wrap', 
+                      alignItems: 'center',
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: 'rgba(0,0,0,0.02)',
+                      border: '1px solid rgba(0,0,0,0.05)',
+                      '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+                    }}>
+                      <Select
+                        size="small"
+                        variant="standard"
+                        value={line.type}
+                        onChange={(e) => {
+                          const newType = e.target.value as 'item' | 'service';
+                          setLines((p) => p.map((l, i) => 
+                            i === idx 
+                              ? { type: newType, itemId: newType === 'item' ? '' : undefined, serviceId: newType === 'service' ? '' : undefined, quantity: l.quantity, unitPrice: 0 }
+                              : l
+                          ));
+                        }}
+                        sx={{ minWidth: 80, fontSize: '0.875rem' }}
+                      >
+                        <MenuItem value="item">Item</MenuItem>
+                        <MenuItem value="service">Service</MenuItem>
+                      </Select>
+                      
+                      {line.type === 'item' ? (
+                        <Autocomplete
+                          size="small"
+                          options={items}
+                          getOptionLabel={(i) => i.name}
+                          value={items.find(i => i.id === line.itemId) || null}
+                          onChange={(_, item) => {
+                            setLines((p) => p.map((l, i) => (i === idx ? { ...l, itemId: item?.id || '', unitPrice: item ? Number(item.price) : 0 } : l)));
+                          }}
+                          sx={{ minWidth: 200, flex: '2 1 150px' }}
+                          renderInput={(params) => <TextField {...params} placeholder="Select item" variant="standard" />}
+                        />
+                      ) : (
+                        <Autocomplete
+                          size="small"
+                          options={services}
+                          getOptionLabel={(s) => s.name}
+                          value={services.find(s => s.id === line.serviceId) || null}
+                          onChange={(_, service) => {
+                            setLines((p) => p.map((l, i) => (i === idx ? { ...l, serviceId: service?.id || '', unitPrice: service ? Number(service.sellingPrice || service.price || 0) : l.unitPrice } : l)));
+                          }}
+                          sx={{ minWidth: 200, flex: '2 1 150px' }}
+                          renderInput={(params) => <TextField {...params} placeholder="Select service" variant="standard" />}
+                        />
+                      )}
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TextField 
+                          type="number" 
+                          size="small" 
+                          label="Qty"
+                          value={line.quantity} 
+                          onChange={(e) => setLines((p) => p.map((l, i) => (i === idx ? { ...l, quantity: Number(e.target.value) } : l)))} 
+                          inputProps={{ min: 1 }} 
+                          sx={{ width: 60 }}
+                          variant="standard"
+                        />
+                        <TextField
+                          type="number"
+                          size="small"
+                          label="Price"
+                          value={line.unitPrice || ''}
+                          onChange={(e) => {
+                            const raw = Number(e.target.value);
+                            setLines((p) => p.map((l, i) => (i === idx ? { ...l, unitPrice: raw } : l)));
+                          }}
+                          placeholder="Price"
+                          inputProps={{ min: 0, step: 0.01 }}
+                          sx={{ width: 80 }}
+                          variant="standard"
+                        />
+                        <IconButton 
+                          size="small" 
+                          color="error" 
+                          onClick={() => setLines((p) => p.filter((_, i) => i !== idx || p.length > 1))}
+                          disabled={lines.length === 1 && !line.itemId && !line.serviceId}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  </Fade>
+                ))}
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+                <Button 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={() => addLine('item')}
+                  startIcon={<AddIcon />}
+                  sx={{ borderRadius: 2, textTransform: 'none' }}
+                >
+                  Add Item Row
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={() => addLine('service')}
+                  startIcon={<BoltIcon />}
+                  sx={{ borderRadius: 2, textTransform: 'none' }}
+                >
+                  Add Service Row
+                </Button>
               </Box>
               <FormControl fullWidth sx={{ mb: 2 }}>
                 <InputLabel>Payment Method</InputLabel>
@@ -723,10 +933,50 @@ export default function Reception() {
                 sx={{ mb: 2 }}
               />
               <TextField label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} fullWidth sx={{ mb: 2 }} />
-              {sellError && <Alert severity="error" sx={{ mb: 1 }}>{sellError}</Alert>}
-              <Button variant="contained" onClick={sell} disabled={selling}>
-                {selling ? 'Selling…' : 'Complete sale'}
-              </Button>
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 3, 
+                bgcolor: 'rgba(79, 70, 229, 0.05)', 
+                border: '1px solid rgba(79, 70, 229, 0.1)',
+                mb: 2,
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+              }}>
+                <Typography variant="h6" align="right" sx={{ mb: 1, color: 'primary.main', fontWeight: 700, letterSpacing: -0.5 }}>
+                  Total: {computedTotal.toFixed(2)} birr
+                </Typography>
+                
+                {sellError && (
+                  <Fade in>
+                    <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{sellError}</Alert>
+                  </Fade>
+                )}
+
+                <Button 
+                  variant="contained" 
+                  fullWidth 
+                  onClick={sell} 
+                  disabled={selling || computedTotal <= 0}
+                  size="large"
+                  sx={{ 
+                    py: 1.5, 
+                    borderRadius: 2, 
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                    boxShadow: '0 4px 14px 0 rgba(79, 70, 229, 0.39)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #4338ca 0%, #4f46e5 100%)',
+                      boxShadow: '0 6px 20px rgba(79, 70, 229, 0.23)',
+                    },
+                    '&.Mui-disabled': {
+                      background: 'rgba(0,0,0,0.12)',
+                    }
+                  }}
+                >
+                  {selling ? 'Processing Sale...' : 'Complete Sale'}
+                </Button>
+              </Box>
             </CardContent>
           </Card>
         </Grid>

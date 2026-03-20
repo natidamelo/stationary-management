@@ -30,24 +30,19 @@ export class ReceptionService {
       $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
     }).sort({ soldAt: -1 }).lean();
     
-    let num = 1;
-    if (last && last.saleNumber) {
-        // Try to extract any digits from the end of the last sale number
-        const match = last.saleNumber.match(/(\d+)(?!.*\d)/);
-        if (match) {
-            num = parseInt(match[1], 10) + 1;
-        } else {
-            // Fallback: if no digits found, count all sales for this tenant
-            num = (await this.saleModel.countDocuments({ 
-              $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
-            })) + 1;
-        }
-    }
+    // We want it to be simple and in order (e.g., SAL-00001)
+    // The most reliable way for a fresh simple start is to count existing documents
+    const count = await this.saleModel.countDocuments({ 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    });
+    
+    // We increment by 1. Since old ones had a different format (SAL-XXXX-...) 
+    // there won't be collisions with SAL-000XX style numbers.
+    const num = count + 1;
     
     // Simple sequential format (e.g., SAL-00001)
-    // This is unique per tenant because of the index: { tenantId, saleNumber }
     const finalSaleNumber = `SAL-${String(num).padStart(5, '0')}`;
-    console.log(`[ReceptionService] Generated simple sale number: ${finalSaleNumber}`);
+    console.log(`[ReceptionService] Generated simple sequential sale number: ${finalSaleNumber}`);
     return finalSaleNumber;
   }
 

@@ -17,28 +17,14 @@ export class InvoicesService {
   private async nextInvoiceNumber(tenantId: string): Promise<string> {
     const cleanTenantId = (tenantId || '').trim();
     const tid = toObjectId(cleanTenantId);
-    if (!tid && !cleanTenantId) return `INV-${Date.now()}`;
     
-    const last = await this.invoiceModel
-      .findOne({ $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] })
-      .sort({ createdAt: -1 })
-      .lean();
-      
-    let num = 1;
-    if (last && last.invoiceNumber) {
-        // Find the last numeric sequence in the string
-        const match = last.invoiceNumber.match(/(\d+)(?!.*\d)/);
-        if (match) {
-            num = parseInt(match[1], 10) + 1;
-        } else {
-            // Fallback: count invoices
-            num = (await this.invoiceModel.countDocuments({ 
-              $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
-            })) + 1;
-        }
-    }
-
-    // Simple format: INV-00001 (sequential)
+    // Simple sequence (e.g. INV-00001) per tenant
+    const count = await this.invoiceModel.countDocuments({ 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    });
+    const num = count + 1;
+    
+    // Simple format: INV-00001
     return `INV-${String(num).padStart(5, '0')}`;
   }
 

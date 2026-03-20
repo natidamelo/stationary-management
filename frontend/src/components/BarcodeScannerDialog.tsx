@@ -60,20 +60,19 @@ export default function BarcodeScannerDialog({ open, onClose, onScan }: BarcodeS
           Html5QrcodeSupportedFormats.CODE_93,
         ];
 
-        const scanner = new Html5Qrcode("reader-container", { 
-          formatsToSupport: formats, 
-          verbose: false,
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true // uses native hardward accelerated detector if available (very fast on tiny barcodes)
-          }
-        });
+        // Ensure we don't use useBarCodeDetectorIfSupported because it hangs on Chrome desktop
+        const scanner = new Html5Qrcode("reader-container", { formatsToSupport: formats, verbose: false });
         scannerRef.current = scanner;
 
         const config = {
           fps: 15,
-          // Removed static qrbox so it scans the entire high-res video feed, 
-          // allowing small barcodes to be easily picked up even if not perfectly centered.
           aspectRatio: 1.0,
+          // Removed static qrbox so it scans the entire high-res video feed
+          videoConstraints: {
+            // Request good resolution for small barcodes
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          }
         };
 
         const handleSuccess = (decodedText: string) => {
@@ -86,30 +85,24 @@ export default function BarcodeScannerDialog({ open, onClose, onScan }: BarcodeS
           // Ignore normal non-detection parse errors
         };
 
-        const envConstraints = { 
-          facingMode: "environment", 
-          width: { ideal: 1920 }, // Request high-res to resolve tiny dots on micro-barcodes
-          height: { ideal: 1080 } 
-        };
-
-        scanner.start(envConstraints, config, handleSuccess, handleError)
+        scanner.start({ facingMode: "environment" }, config, handleSuccess, handleError)
           .then(() => {
             if (isMounted) setLoading(false);
           })
           .catch((err) => {
-            // Fallback for devices without a rear camera (like laptops/desktops) or if high-res constraints fail
-            if (isMounted) {
-              scanner.start({ facingMode: "user" }, config, handleSuccess, handleError)
-                .then(() => {
-                  if (isMounted) setLoading(false);
-                })
-                .catch((err2) => {
-                  if (isMounted) {
-                    setLoading(false);
-                    setError(err2?.message || err?.message || "Failed to start camera. Make sure you granted permissions.");
-                  }
-                });
-            }
+            if (!isMounted) return;
+            // Fallback for laptops/desktops: use default user camera and simple config
+            const fallbackConfig = { fps: 15, aspectRatio: 1.0 };
+            scanner.start({ facingMode: "user" }, fallbackConfig, handleSuccess, handleError)
+              .then(() => {
+                if (isMounted) setLoading(false);
+              })
+              .catch((err2) => {
+                if (isMounted) {
+                  setLoading(false);
+                  setError(err2?.message || err?.message || "Failed to start camera. Make sure you granted permissions.");
+                }
+              });
           });
       } catch (err: any) {
         if (isMounted) {

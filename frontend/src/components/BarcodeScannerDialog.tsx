@@ -60,12 +60,19 @@ export default function BarcodeScannerDialog({ open, onClose, onScan }: BarcodeS
           Html5QrcodeSupportedFormats.CODE_93,
         ];
 
-        const scanner = new Html5Qrcode("reader-container", { formatsToSupport: formats, verbose: false });
+        const scanner = new Html5Qrcode("reader-container", { 
+          formatsToSupport: formats, 
+          verbose: false,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true // uses native hardward accelerated detector if available (very fast on tiny barcodes)
+          }
+        });
         scannerRef.current = scanner;
 
         const config = {
           fps: 15,
-          qrbox: { width: 250, height: 150 },
+          // Removed static qrbox so it scans the entire high-res video feed, 
+          // allowing small barcodes to be easily picked up even if not perfectly centered.
           aspectRatio: 1.0,
         };
 
@@ -79,12 +86,18 @@ export default function BarcodeScannerDialog({ open, onClose, onScan }: BarcodeS
           // Ignore normal non-detection parse errors
         };
 
-        scanner.start({ facingMode: "environment" }, config, handleSuccess, handleError)
+        const envConstraints = { 
+          facingMode: "environment", 
+          width: { ideal: 1920 }, // Request high-res to resolve tiny dots on micro-barcodes
+          height: { ideal: 1080 } 
+        };
+
+        scanner.start(envConstraints, config, handleSuccess, handleError)
           .then(() => {
             if (isMounted) setLoading(false);
           })
           .catch((err) => {
-            // Fallback for devices without a rear camera (like laptops/desktops)
+            // Fallback for devices without a rear camera (like laptops/desktops) or if high-res constraints fail
             if (isMounted) {
               scanner.start({ facingMode: "user" }, config, handleSuccess, handleError)
                 .then(() => {

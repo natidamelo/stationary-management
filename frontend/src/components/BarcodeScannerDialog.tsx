@@ -140,6 +140,39 @@ export default function BarcodeScannerDialog({ open, onClose, onScan }: BarcodeS
           {/* Html5Qrcode will render here */}
           <div id="reader-container" style={{ width: '100%', height: '100%', border: 'none' }}></div>
           
+          {/* Custom Visual Focus Target */}
+          {!loading && !error && (
+            <Box sx={{
+              position: 'absolute',
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '75%', height: '40%',
+              border: '2px solid rgba(79, 70, 229, 0.6)',
+              borderRadius: 3,
+              pointerEvents: 'none',
+              zIndex: 5,
+              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.45)', // Shaded background outside the focus area
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              {/* Animated laser line */}
+              <Box sx={{
+                width: '100%', height: '2px',
+                bgcolor: 'rgba(239, 68, 68, 0.8)',
+                boxShadow: '0 0 8px rgba(239, 68, 68, 0.8)',
+                position: 'absolute',
+                animation: 'scan 2s infinite ease-in-out'
+              }} />
+              
+              {/* Corner accents */}
+              <Box sx={{ position: 'absolute', top: -2, left: -2, width: 20, height: 20, borderTop: '3px solid #4f46e5', borderLeft: '3px solid #4f46e5', borderTopLeftRadius: 8 }} />
+              <Box sx={{ position: 'absolute', top: -2, right: -2, width: 20, height: 20, borderTop: '3px solid #4f46e5', borderRight: '3px solid #4f46e5', borderTopRightRadius: 8 }} />
+              <Box sx={{ position: 'absolute', bottom: -2, left: -2, width: 20, height: 20, borderBottom: '3px solid #4f46e5', borderLeft: '3px solid #4f46e5', borderBottomLeftRadius: 8 }} />
+              <Box sx={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderBottom: '3px solid #4f46e5', borderRight: '3px solid #4f46e5', borderBottomRightRadius: 8 }} />
+            </Box>
+          )}
+          
           {loading && !error && (
             <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.8)', color: '#fff', zIndex: 10 }}>
               <CircularProgress color="inherit" sx={{ mb: 2 }} />
@@ -160,6 +193,10 @@ export default function BarcodeScannerDialog({ open, onClose, onScan }: BarcodeS
             }
             #reader-container__scan_region img {
               display: none; /* If it injects any unwanted images */
+            }
+            @keyframes scan {
+              0%, 100% { top: 10%; }
+              50% { top: 90%; }
             }
           `}</style>
         </Box>

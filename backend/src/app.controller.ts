@@ -12,6 +12,11 @@ export class AppController {
 
   @Get('health')
   getHealth() {
-    return { status: 'ok', version: '1.0.1', deployedAt: new Date().toISOString() };
+    return { 
+      status: 'ok', 
+      version: '1.1.0', 
+      update: 'Sequential Sale Number Implementation',
+      deployedAt: new Date().toISOString() 
+    };
   }
 }

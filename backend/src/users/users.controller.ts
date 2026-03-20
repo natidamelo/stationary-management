@@ -38,6 +38,14 @@ export class UsersController {
     });
   }
 
+  @Put(':id')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.DEALER, RoleEnum.ADMIN)
+  @ApiOperation({ summary: 'Update user profile details' })
+  async update(@Param('id') id: string, @Body() data: any) {
+    return this.users.update(id, data);
+  }
+
   @Patch(':id/status')
   @UseGuards(RolesGuard)
   @Roles(RoleEnum.DEALER, RoleEnum.ADMIN)
@@ -53,14 +61,6 @@ export class UsersController {
   async updatePassword(@Param('id') id: string, @Body('password') pass: string) {
     const hashed = await bcrypt.hash(pass, 10);
     return this.users.updatePassword(id, hashed);
-  }
-
-  @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles(RoleEnum.DEALER, RoleEnum.ADMIN)
-  @ApiOperation({ summary: 'Update user profile details' })
-  async update(@Param('id') id: string, @Body() data: any) {
-    return this.users.update(id, data);
   }
 
   @Delete(':id')

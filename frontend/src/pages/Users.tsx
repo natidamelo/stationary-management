@@ -127,7 +127,7 @@ export default function Users() {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { password, ...updateData } = formData;
         // Ensure no leading slash to avoid absolute path joining issues in axios if baseURL is tricky
-        await api.patch(`/users/${editingUser.id}`, updateData);
+        await api.put(`/users/${editingUser.id}`, updateData);
       } else {
         await api.post('/users', formData);
       }

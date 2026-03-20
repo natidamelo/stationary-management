@@ -94,10 +94,10 @@ export default function Items() {
     try {
       JsBarcode(canvas, barcode, {
         format: 'CODE128',
-        width: 2.5, // High-performance width for mobile scanners
-        height: 60,  // High-performance height for mobile scanners
+        width: 3, // Very thick bars for maximum scannability
+        height: 85, // Tall bars to help phone scanners
         displayValue: true,
-        fontSize: 12,
+        fontSize: 14,
         margin: 10,
       });
 
@@ -142,31 +142,31 @@ export default function Items() {
                 justify-content: flex-start;
               }
               .label {
-                width: 50mm;
-                height: 25mm;
+                width: 75mm; /* Larger physical label */
+                height: 40mm; /* Larger physical label */
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                padding: 1mm 1.5mm;
-                border: 0.3mm solid #999;
+                padding: 3mm;
+                border: 0.5mm solid #000;
                 page-break-inside: avoid;
                 overflow: hidden;
               }
               .item-name {
-                font-size: 5.5pt;
+                font-size: 10pt; /* Larger text */
                 font-weight: bold;
                 line-height: 1.2;
-                max-width: 47mm;
+                max-width: 70mm;
                 overflow: hidden;
                 white-space: nowrap;
                 text-overflow: ellipsis;
-                margin-bottom: 0.3mm;
+                margin-bottom: 2mm;
               }
               .item-sku {
-                font-size: 5pt;
+                font-size: 8pt;
                 color: #444;
-                margin-bottom: 0.3mm;
+                margin-bottom: 2mm;
               }
               .barcode-img {
                 max-width: 90%;

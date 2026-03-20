@@ -126,11 +126,11 @@ export default function StockManagement() {
     try {
       JsBarcode(canvas, barcode, {
         format: 'CODE128',
-        width: 2.5, // Increased for better scanning
-        height: 60,  // Increased for better scanning
+        width: 3, 
+        height: 85, 
         displayValue: true,
-        fontSize: 12,
-        margin: 10,  // Better white space around barcode
+        fontSize: 14,
+        margin: 10,
       });
 
       const labelHtml = `
@@ -181,10 +181,10 @@ export default function StockManagement() {
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                width: 45mm;
-                height: 30mm;
-                padding: 2mm;
-                border: 0.2mm solid #ccc;
+                width: 75mm;
+                height: 40mm;
+                padding: 3mm;
+                border: 0.5mm solid #000;
                 page-break-inside: avoid;
                 text-align: center;
               }

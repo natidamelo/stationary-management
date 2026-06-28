@@ -26,10 +26,12 @@ import {
   InputLabel,
   Alert,
   Card,
+  InputAdornment,
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import SearchIcon from '@mui/icons-material/Search';
 import { Fragment } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -58,6 +60,17 @@ export default function PurchaseRequests() {
   const [items, setItems] = useState<Array<{ id: string; name: string; sku: string; price?: number }>>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredList = list.filter((pr) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      pr.requestNumber.toLowerCase().includes(q) ||
+      (pr.requestedBy?.fullName || '').toLowerCase().includes(q) ||
+      (pr.store?.name || '').toLowerCase().includes(q)
+    );
+  });
   const [modal, setModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -204,35 +217,58 @@ export default function PurchaseRequests() {
       </Box>
 
       {/* Filters Toolbar */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <Select
-            value={statusFilter}
-            onChange={(e) => handleStatusFilterChange(e.target.value)}
-            displayEmpty
-            sx={{ borderRadius: 2 }}
-          >
-            <MenuItem value="">All Statuses</MenuItem>
-            <MenuItem value="draft">Draft</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
-            <MenuItem value="approved">Approved</MenuItem>
-            <MenuItem value="rejected">Rejected</MenuItem>
-          </Select>
-        </FormControl>
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <TextField
+          placeholder="Search by requisition number, requester, or store..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          size="small"
+          sx={{ 
+            minWidth: 320, 
+            flex: 1,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 3,
+              backgroundColor: 'background.paper',
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <Select
+              value={statusFilter}
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
+              displayEmpty
+              sx={{ borderRadius: 2.5 }}
+            >
+              <MenuItem value="">All Statuses</MenuItem>
+              <MenuItem value="draft">Draft</MenuItem>
+              <MenuItem value="pending">Pending</MenuItem>
+              <MenuItem value="approved">Approved</MenuItem>
+              <MenuItem value="rejected">Rejected</MenuItem>
+            </Select>
+          </FormControl>
 
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <Select
-            value={storeFilter}
-            onChange={(e) => handleStoreFilterChange(e.target.value)}
-            displayEmpty
-            sx={{ borderRadius: 2 }}
-          >
-            <MenuItem value="">All Stores</MenuItem>
-            {stores.map((s) => (
-              <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <Select
+              value={storeFilter}
+              onChange={(e) => handleStoreFilterChange(e.target.value)}
+              displayEmpty
+              sx={{ borderRadius: 2.5 }}
+            >
+              <MenuItem value="">All Stores</MenuItem>
+              {stores.map((s) => (
+                <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
       </Box>
 
       <Card>
@@ -251,14 +287,14 @@ export default function PurchaseRequests() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {list.length === 0 ? (
+              {filteredList.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                     <Typography color="text.secondary" variant="body2">No requisitions found.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                list.map((pr) => (
+                filteredList.map((pr) => (
                   <Fragment key={pr.id}>
                     <TableRow hover>
                       <TableCell padding="checkbox">

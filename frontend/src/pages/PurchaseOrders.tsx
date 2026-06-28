@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -22,10 +22,15 @@ import {
   Chip,
   CircularProgress,
   Tooltip,
+  InputAdornment,
+  IconButton,
+  Divider,
 } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import CallReceivedRoundedIcon from '@mui/icons-material/CallReceivedRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import SearchIcon from '@mui/icons-material/Search';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -39,45 +44,79 @@ type PO = {
   lines: Array<{ id: string; quantity: number; receivedQuantity: number; item: { name: string; sku: string }; unitPrice: number }>;
 };
 
-const canManage = (role: string) => ['admin', 'manager', 'inventory_clerk'].includes(role);
-
-const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
-  draft: { bg: '#f3f4f6', color: '#6b7280' },
-  sent: { bg: '#eef2ff', color: '#4f46e5' },
-  received: { bg: '#ecfdf5', color: '#059669' },
-  closed: { bg: '#f9fafb', color: '#9ca3af' },
+type Invoice = {
+  id: string;
+  invoiceNumber: string;
+  saleNumber?: string;
+  issueDate: string;
+  customerName?: string;
+  lines: Array<{ description: string; sku?: string; quantity: number; unitPrice: number; total: number }>;
+  totalAmount: number;
+  status: string;
 };
+
+type UnifiedOrder = {
+  id: string;
+  orderNumber: string;
+  type: 'PURCHASE' | 'SALE';
+  status: string;
+  partner: string;
+  itemsCount: number;
+  totalAmount: number;
+  date: string;
+  raw: any;
+};
+
+const canManage = (role: string) => ['admin', 'manager', 'inventory_clerk'].includes(role);
 
 export default function PurchaseOrders() {
   const { user } = useAuth();
-  const [list, setList] = useState<PO[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PO[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([]);
   const [items, setItems] = useState<Array<{ id: string; name: string; sku: string }>>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'PURCHASE' | 'SALE' | 'PENDING'>('ALL');
+  
+  // Dialogs
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ supplierId: '', lines: [{ itemId: '', quantity: 1, unitPrice: 0 }], notes: '' });
   const [receiveModal, setReceiveModal] = useState<PO | null>(null);
   const [receiveLines, setReceiveLines] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  
+  // Details view dialog
+  const [detailsOrder, setDetailsOrder] = useState<UnifiedOrder | null>(null);
 
   const load = () => {
-    const q = statusFilter ? `?status=${statusFilter}` : '';
-    api.get<PO[]>(`/purchase-orders${q}`).then((r) => setList(r.data));
+    Promise.all([
+      api.get<PO[]>('/purchase-orders').then((r) => r.data),
+      api.get<Invoice[]>('/invoices').then((r) => r.data),
+    ]).then(([pos, invs]) => {
+      setPurchaseOrders(pos);
+      setInvoices(invs);
+    }).catch((err) => console.error("Error reloading orders:", err));
   };
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
-      api.get<PO[]>('/purchase-orders').then((r) => setList(r.data)),
-      api.get<Array<{ id: string; name: string }>>('/suppliers').then((r) => setSuppliers(r.data)),
-      api.get<Array<{ id: string; name: string; sku: string }>>('/items').then((r) => setItems(r.data)),
-    ]).finally(() => setLoading(false));
+      api.get<PO[]>('/purchase-orders').then((r) => r.data),
+      api.get<Invoice[]>('/invoices').then((r) => r.data),
+      api.get<Array<{ id: string; name: string }>>('/suppliers').then((r) => r.data),
+      api.get<Array<{ id: string; name: string; sku: string }>>('/items').then((r) => r.data),
+    ]).then(([pos, invs, sups, itemsData]) => {
+      setPurchaseOrders(pos);
+      setInvoices(invs);
+      setSuppliers(sups);
+      setItems(itemsData);
+    }).catch((err) => console.error("Error loading orders data:", err))
+      .finally(() => setLoading(false));
   }, []);
-  useEffect(() => { if (statusFilter !== undefined) load(); }, [statusFilter]);
 
   const createPo = async () => {
-    // Validation
     if (!form.supplierId) {
       setCreateError('Please select a supplier');
       return;
@@ -98,7 +137,6 @@ export default function PurchaseOrders() {
         lines: validLines,
         notes: form.notes || undefined,
       };
-      console.log('Sending purchase order payload:', payload);
       await api.post('/purchase-orders', payload);
       setModal(false);
       setForm({ supplierId: '', lines: [{ itemId: '', quantity: 1, unitPrice: 0 }], notes: '' });
@@ -106,32 +144,17 @@ export default function PurchaseOrders() {
       load();
     } catch (error: any) {
       console.error('Error creating purchase order:', error);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error response status:', error.response?.status);
-      
-      // Extract validation errors from backend response
       let errorMessage = 'Failed to create purchase order';
       if (error.response?.data) {
         const data = error.response.data;
         if (data.message) {
-          // If it's an array of validation errors, format them nicely
           if (Array.isArray(data.message)) {
             errorMessage = data.message.join(', ');
           } else if (typeof data.message === 'string') {
             errorMessage = data.message;
-          } else {
-            errorMessage = JSON.stringify(data.message);
           }
-        } else if (data.error) {
-          errorMessage = data.error;
-        } else {
-          // Try to extract error from the response object itself
-          errorMessage = JSON.stringify(data);
         }
-      } else if (error.message) {
-        errorMessage = error.message;
       }
-      
       setCreateError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -142,12 +165,14 @@ export default function PurchaseOrders() {
     await api.post(`/purchase-orders/${id}/send`);
     load();
   };
+
   const openReceive = (po: PO) => {
     setReceiveModal(po);
     const init: Record<string, number> = {};
     po.lines.forEach((l) => { init[l.id] = Number(l.receivedQuantity) || 0; });
     setReceiveLines(init);
   };
+
   const submitReceive = async () => {
     if (!receiveModal) return;
     await api.post(`/purchase-orders/${receiveModal.id}/receive`, {
@@ -156,11 +181,77 @@ export default function PurchaseOrders() {
     setReceiveModal(null);
     load();
   };
+
   const closePo = async (id: string) => {
     await api.post(`/purchase-orders/${id}/close`);
     load();
   };
+
   const addLine = () => setForm((f) => ({ ...f, lines: [...f.lines, { itemId: '', quantity: 1, unitPrice: 0 }] }));
+
+  // Map POs and Invoices to a single unified list
+  const unifiedOrders = useMemo(() => {
+    const orders: UnifiedOrder[] = [];
+
+    // Map Purchase Orders
+    purchaseOrders.forEach((po) => {
+      const itemsCount = po.lines.reduce((sum, l) => sum + l.quantity, 0);
+      const totalAmount = po.lines.reduce((sum, l) => sum + (l.quantity * l.unitPrice), 0);
+      orders.push({
+        id: po.id,
+        orderNumber: po.poNumber,
+        type: 'PURCHASE',
+        status: po.status,
+        partner: po.supplier?.name || '—',
+        itemsCount,
+        totalAmount,
+        date: po.orderDate || po.poNumber,
+        raw: po,
+      });
+    });
+
+    // Map Invoices (Sales)
+    invoices.forEach((inv) => {
+      const itemsCount = inv.lines.reduce((sum, l) => sum + l.quantity, 0);
+      orders.push({
+        id: inv.id,
+        orderNumber: inv.invoiceNumber,
+        type: 'SALE',
+        status: inv.status === 'paid' ? 'delivered' : 'pending',
+        partner: inv.customerName || 'Walk-in Customer',
+        itemsCount,
+        totalAmount: inv.totalAmount,
+        date: inv.issueDate,
+        raw: inv,
+      });
+    });
+
+    // Sort by date descending
+    return orders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [purchaseOrders, invoices]);
+
+  // Filter orders by active tab and search query
+  const filteredOrders = useMemo(() => {
+    return unifiedOrders.filter((ord) => {
+      // Filter by active tab
+      if (activeTab === 'PURCHASE' && ord.type !== 'PURCHASE') return false;
+      if (activeTab === 'SALE' && ord.type !== 'SALE') return false;
+      if (activeTab === 'PENDING') {
+        const isPending = ord.status.toLowerCase() === 'pending' || 
+                          ord.status.toLowerCase() === 'draft' || 
+                          ord.status.toLowerCase() === 'sent';
+        if (!isPending) return false;
+      }
+
+      // Filter by search query
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+      return (
+        ord.orderNumber.toLowerCase().includes(q) ||
+        ord.partner.toLowerCase().includes(q)
+      );
+    });
+  }, [unifiedOrders, activeTab, searchQuery]);
 
   if (loading) {
     return (
@@ -174,35 +265,60 @@ export default function PurchaseOrders() {
     <Box sx={{ animation: 'fadeIn 0.3s ease-out', '@keyframes fadeIn': { from: { opacity: 0 }, to: { opacity: 1 } } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
         <Box>
-          <Typography variant="h5" fontWeight={700} sx={{ letterSpacing: '-0.01em' }}>Purchase Orders</Typography>
+          <Typography variant="h5" fontWeight={700} sx={{ letterSpacing: '-0.01em' }}>Orders</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            {list.length} {list.length === 1 ? 'order' : 'orders'} total
+            Manage procurement purchase orders and customer sales fulfillments.
           </Typography>
         </Box>
         {canManage(user?.role ?? '') && (
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setModal(true)}>
-            Create PO
+            New Order
           </Button>
         )}
       </Box>
 
-      <Box sx={{ mb: 2.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {['', 'draft', 'sent', 'received', 'closed'].map((s) => (
-          <Chip
-            key={s}
-            label={s || 'All'}
-            onClick={() => setStatusFilter(s)}
-            variant={statusFilter === s ? 'filled' : 'outlined'}
-            sx={{
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              textTransform: 'capitalize',
-              ...(statusFilter === s
-                ? { bgcolor: '#4f46e5', color: '#fff', borderColor: '#4f46e5' }
-                : { borderColor: '#e5e7eb', color: 'text.secondary', '&:hover': { bgcolor: '#f9fafb' } }),
-            }}
-          />
-        ))}
+      {/* Tabs and Search row */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {(['ALL', 'PURCHASE', 'SALE', 'PENDING'] as const).map((tab) => (
+            <Chip
+              key={tab}
+              label={tab}
+              onClick={() => setActiveTab(tab)}
+              variant={activeTab === tab ? 'filled' : 'outlined'}
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                letterSpacing: '0.02em',
+                px: 0.5,
+                ...(activeTab === tab
+                  ? { bgcolor: '#4f46e5', color: '#fff', borderColor: '#4f46e5' }
+                  : { borderColor: '#e2e8f0', color: 'text.secondary', '&:hover': { bgcolor: '#f1f5f9' } }),
+              }}
+            />
+          ))}
+        </Box>
+
+        <TextField
+          placeholder="Search by order number or partner..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          size="small"
+          sx={{ 
+            minWidth: 280,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 3,
+              backgroundColor: 'background.paper',
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
       </Box>
 
       <Card>
@@ -210,77 +326,114 @@ export default function PurchaseOrders() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>PO Number</TableCell>
-                <TableCell>Supplier</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Order Date</TableCell>
-                {canManage(user?.role ?? '') && <TableCell align="right">Actions</TableCell>}
+                <TableCell>ORDER #</TableCell>
+                <TableCell>TYPE</TableCell>
+                <TableCell>STATUS</TableCell>
+                <TableCell>PARTNER / CUSTOMER</TableCell>
+                <TableCell align="right">ITEMS COUNT</TableCell>
+                <TableCell align="right">TOTAL AMOUNT</TableCell>
+                <TableCell>CREATED DATE</TableCell>
+                <TableCell align="right">ACTIONS</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {list.map((po) => {
-                const style = STATUS_STYLES[po.status] || STATUS_STYLES.draft;
+              {filteredOrders.map((ord) => {
+                const isPurchase = ord.type === 'PURCHASE';
+                const statusStyle = ord.status === 'delivered' || ord.status === 'received' || ord.status === 'paid'
+                  ? { bg: '#ecfdf5', color: '#059669' }
+                  : ord.status === 'pending' || ord.status === 'draft' || ord.status === 'sent'
+                  ? { bg: '#fffbeb', color: '#d97706' }
+                  : { bg: '#f3f4f6', color: '#6b7280' };
+
                 return (
-                  <TableRow key={po.id}>
+                  <TableRow key={ord.id + ord.type} hover>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={600} fontFamily="monospace" sx={{ fontSize: '0.84rem' }}>{po.poNumber}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>{po.supplier?.name}</Typography>
+                      <Typography variant="body2" fontWeight={700} fontFamily="monospace" sx={{ fontSize: '0.82rem', color: '#4f46e5' }}>
+                        {ord.orderNumber}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={po.status}
+                        label={ord.type}
                         size="small"
                         sx={{
-                          bgcolor: style.bg,
-                          color: style.color,
-                          fontWeight: 600,
-                          fontSize: '0.72rem',
-                          textTransform: 'capitalize',
-                          border: 'none',
+                          bgcolor: isPurchase ? '#f5f3ff' : '#ecfdf5',
+                          color: isPurchase ? '#7c3aed' : '#059669',
+                          fontWeight: 800,
+                          fontSize: '0.68rem',
+                          borderRadius: '6px',
                         }}
                       />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {po.orderDate ? new Date(po.orderDate).toLocaleDateString() : '—'}
+                      <Chip
+                        label={ord.status.toUpperCase()}
+                        size="small"
+                        sx={{
+                          bgcolor: statusStyle.bg,
+                          color: statusStyle.color,
+                          fontWeight: 700,
+                          fontSize: '0.65rem',
+                          borderRadius: '6px',
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
+                        {ord.partner}
                       </Typography>
                     </TableCell>
-                    {canManage(user?.role ?? '') && (
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                          {po.status === 'draft' && (
-                            <Tooltip title="Send">
-                              <Button size="small" variant="contained" startIcon={<SendRoundedIcon sx={{ fontSize: '0.9rem !important' }} />} onClick={() => sendPo(po.id)} sx={{ fontSize: '0.78rem' }}>
+                    <TableCell align="right">
+                      <Typography variant="body2" fontWeight={500}>
+                        {ord.itemsCount} items
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#4f46e5' }}>
+                        ETB {Number(ord.totalAmount).toFixed(2)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {new Date(ord.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <Tooltip title="View Details">
+                          <IconButton size="small" onClick={() => setDetailsOrder(ord)} color="primary">
+                            <VisibilityRoundedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+
+                        {isPurchase && canManage(user?.role ?? '') && (
+                          <>
+                            {ord.status === 'draft' && (
+                              <Button size="small" variant="contained" startIcon={<SendRoundedIcon sx={{ fontSize: '0.8rem !important' }} />} onClick={() => sendPo(ord.id)} sx={{ py: 0.5, px: 1, fontSize: '0.75rem' }}>
                                 Send
                               </Button>
-                            </Tooltip>
-                          )}
-                          {(po.status === 'sent' || po.status === 'received') && (
-                            <Tooltip title="Receive items">
-                              <Button size="small" variant="outlined" startIcon={<CallReceivedRoundedIcon sx={{ fontSize: '0.9rem !important' }} />} onClick={() => openReceive(po)} sx={{ fontSize: '0.78rem' }}>
+                            )}
+                            {(ord.status === 'sent' || ord.status === 'received') && (
+                              <Button size="small" variant="outlined" startIcon={<CallReceivedRoundedIcon sx={{ fontSize: '0.8rem !important' }} />} onClick={() => openReceive(ord.raw)} sx={{ py: 0.5, px: 1, fontSize: '0.75rem' }}>
                                 Receive
                               </Button>
-                            </Tooltip>
-                          )}
-                          {po.status !== 'closed' && po.status !== 'draft' && (
-                            <Tooltip title="Close PO">
-                              <Button size="small" sx={{ color: 'text.secondary', fontSize: '0.78rem' }} onClick={() => closePo(po.id)}>
+                            )}
+                            {ord.status !== 'closed' && ord.status !== 'draft' && (
+                              <Button size="small" sx={{ color: 'text.secondary', py: 0.5, px: 1, fontSize: '0.75rem' }} onClick={() => closePo(ord.id)}>
                                 Close
                               </Button>
-                            </Tooltip>
-                          )}
-                        </Box>
-                      </TableCell>
-                    )}
+                            )}
+                          </>
+                        )}
+                      </Box>
+                    </TableCell>
                   </TableRow>
                 );
               })}
-              {list.length === 0 && (
+              {filteredOrders.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 6 }}>
-                    <Typography variant="body2" color="text.secondary">No purchase orders found</Typography>
+                  <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
+                    <Typography variant="body2" color="text.secondary">No orders found</Typography>
                   </TableCell>
                 </TableRow>
               )}
@@ -289,9 +442,95 @@ export default function PurchaseOrders() {
         </TableContainer>
       </Card>
 
+      {/* Details Dialog */}
+      <Dialog open={!!detailsOrder} onClose={() => setDetailsOrder(null)} maxWidth="sm" fullWidth>
+        {detailsOrder && (
+          <>
+            <DialogTitle sx={{ fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Order Details - {detailsOrder.orderNumber}</span>
+              <Chip
+                label={detailsOrder.type}
+                size="small"
+                sx={{
+                  bgcolor: detailsOrder.type === 'PURCHASE' ? '#f5f3ff' : '#ecfdf5',
+                  color: detailsOrder.type === 'PURCHASE' ? '#7c3aed' : '#059669',
+                  fontWeight: 800,
+                  fontSize: '0.68rem',
+                }}
+              />
+            </DialogTitle>
+            <DialogContent dividers>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>PARTNER / CUSTOMER</Typography>
+                  <Typography variant="body1" fontWeight={700}>{detailsOrder.partner}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>ORDER DATE</Typography>
+                  <Typography variant="body2">{new Date(detailsOrder.date).toLocaleString()}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>STATUS</Typography>
+                  <Box sx={{ mt: 0.25 }}>
+                    <Chip label={detailsOrder.status.toUpperCase()} size="small" color="primary" sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
+                  </Box>
+                </Box>
+                
+                <Divider sx={{ my: 1 }} />
+                
+                <Typography variant="subtitle2" fontWeight={700}>ORDERED ITEMS</Typography>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Item Description</TableCell>
+                        <TableCell align="right">Qty</TableCell>
+                        <TableCell align="right">Unit Price</TableCell>
+                        <TableCell align="right">Total</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {detailsOrder.type === 'PURCHASE'
+                        ? detailsOrder.raw.lines.map((line: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell>{line.item?.sku} - {line.item?.name}</TableCell>
+                              <TableCell align="right">{line.quantity}</TableCell>
+                              <TableCell align="right">ETB {Number(line.unitPrice).toFixed(2)}</TableCell>
+                              <TableCell align="right">ETB {Number(line.quantity * line.unitPrice).toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))
+                        : detailsOrder.raw.lines.map((line: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell>{line.sku} - {line.description}</TableCell>
+                              <TableCell align="right">{line.quantity}</TableCell>
+                              <TableCell align="right">ETB {Number(line.unitPrice).toFixed(2)}</TableCell>
+                              <TableCell align="right">ETB {Number(line.total).toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                  <Box sx={{ textAlign: 'right' }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>TOTAL AMOUNT</Typography>
+                    <Typography variant="h6" fontWeight={800} color="primary">
+                      ETB {Number(detailsOrder.totalAmount).toFixed(2)}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button onClick={() => setDetailsOrder(null)} variant="outlined">Close</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
       {/* Create PO Dialog */}
       <Dialog open={modal} onClose={() => { if (!submitting) { setModal(false); setCreateError(null); } }} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Purchase Order</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>Create Purchase Order</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
             {createError && (
@@ -340,7 +579,7 @@ export default function PurchaseOrders() {
       <Dialog open={!!receiveModal} onClose={() => setReceiveModal(null)} maxWidth="sm" fullWidth>
         {receiveModal && (
           <>
-            <DialogTitle>Receive – {receiveModal.poNumber}</DialogTitle>
+            <DialogTitle sx={{ fontWeight: 700 }}>Receive – {receiveModal.poNumber}</DialogTitle>
             <DialogContent>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
                 {receiveModal.lines.map((line) => (

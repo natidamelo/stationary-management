@@ -47,6 +47,7 @@ import InboxRoundedIcon from '@mui/icons-material/InboxRounded';
 import CallMadeRoundedIcon from '@mui/icons-material/CallMadeRounded';
 import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
 import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded';
+import StarRoundedIcon from '@mui/icons-material/StarRounded';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -145,10 +146,11 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const topGroup = [
+  const masterRegistriesGroup = [
+    { to: '/categories', label: 'Categories', icon: <CategoryRoundedIcon fontSize="small" /> },
+    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/stores', label: 'Stores', icon: <BusinessRoundedIcon fontSize="small" /> }] : []),
     { to: '/suppliers', label: 'Suppliers', icon: <LocalShippingRoundedIcon fontSize="small" /> },
     { to: '/items', label: 'Products', icon: <InventoryRoundedIcon fontSize="small" /> },
-    { to: '/categories', label: 'Categories', icon: <CategoryRoundedIcon fontSize="small" /> },
     { to: '/customers', label: 'Customers', icon: <GroupRoundedIcon fontSize="small" /> },
   ];
 
@@ -164,7 +166,6 @@ export default function Layout() {
   const adminGroup = [
     ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/users', label: 'Users', icon: <PeopleRoundedIcon fontSize="small" /> }] : []),
     { to: '/messages', label: 'Messages', icon: <ForumRoundedIcon fontSize="small" /> },
-    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/stores', label: 'Stores', icon: <BusinessRoundedIcon fontSize="small" /> }] : []),
     ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/reports', label: 'Reports', icon: <AssessmentRoundedIcon fontSize="small" /> }] : []),
   ];
 
@@ -218,42 +219,27 @@ export default function Layout() {
   const drawerContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box sx={{ p: 2.5, pb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        {settings.logoUrl ? (
-          <Box
-            component="img"
-            src={settings.logoUrl}
-            alt="Logo"
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2.5,
-              objectFit: 'cover',
-              boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
-            }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2.5,
-              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
-            }}
-          >
-            <InventoryRoundedIcon sx={{ fontSize: '1.3rem' }} />
-          </Box>
-        )}
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            boxShadow: '0 4px 12px rgba(79,70,229,0.3)',
+          }}
+        >
+          <StarRoundedIcon sx={{ fontSize: '1.4rem' }} />
+        </Box>
         <Box>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ lineHeight: 1.2, color: '#1e293b', letterSpacing: '-0.01em' }}>
-            {settings.stationeryName || 'WOUBREX PLC'}
+          <Typography variant="subtitle1" fontWeight={800} sx={{ lineHeight: 1.1, color: '#4f46e5', letterSpacing: '-0.02em', fontSize: '1.1rem' }}>
+            WOUBREX PLC
           </Typography>
-          <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
-            Stock Management System
+          <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.05em' }}>
+            STOCK MANAGEMENT SYSTEM
           </Typography>
         </Box>
       </Box>
@@ -299,7 +285,10 @@ export default function Layout() {
           {/* Dashboard link directly */}
           {renderLink({ to: '/', label: 'Dashboard', icon: <DashboardRoundedIcon fontSize="small" /> })}
           
-          {topGroup.map(renderLink)}
+          <Typography variant="overline" sx={{ color: '#94a3b8', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', px: 1.25, mt: 2, mb: 0.5, display: 'block' }}>
+            MASTER REGISTRIES
+          </Typography>
+          {masterRegistriesGroup.map(renderLink)}
 
           <Typography variant="overline" sx={{ color: '#94a3b8', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', px: 1.25, mt: 2, mb: 0.5, display: 'block' }}>
             TRANSACTIONS & SALES
@@ -357,6 +346,12 @@ export default function Layout() {
           </ListItemIcon>
           <ListItemText primary="Logout" primaryTypographyProps={{ fontSize: '0.84rem', fontWeight: 500, color: '#64748b' }} />
         </ListItemButton>
+        {/* Version Footer */}
+        <Box sx={{ p: 1.5, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider', mt: 'auto' }}>
+          <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.68rem', fontWeight: 600 }}>
+            v1.0.0 • Ready
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );
@@ -411,9 +406,24 @@ export default function Layout() {
               >
                 <MenuRoundedIcon />
               </IconButton>
-              <Typography variant="h6" fontWeight={700} sx={{ color: 'text.primary', letterSpacing: '-0.01em', display: { xs: 'none', lg: 'block' } }}>
-                {pageTitle}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Typography variant="h6" fontWeight={700} sx={{ color: 'text.primary', letterSpacing: '-0.01em', display: { xs: 'none', lg: 'block' } }}>
+                  {pageTitle}
+                </Typography>
+                <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', lg: 'block' }, mx: 0.5 }} />
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: '#64748b', 
+                    fontWeight: 700, 
+                    letterSpacing: '0.05em', 
+                    fontSize: '0.72rem', 
+                    display: { xs: 'none', md: 'block' } 
+                  }}
+                >
+                  WOUBREX STOCK MANAGEMENT SYSTEM
+                </Typography>
+              </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
               <GlobalSearch />

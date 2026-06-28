@@ -32,6 +32,8 @@ export type User = {
   fullName: string;
   department?: string;
   role: string;
+  tenantId?: string;
+  storeId?: string;
 };
 
 export type LicenseInfo = {

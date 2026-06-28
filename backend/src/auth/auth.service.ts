@@ -14,6 +14,7 @@ import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
 import { TenantsService } from '../tenants/tenants.service';
+import { StoresService } from '../stores/stores.service';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
     private jwtService: JwtService,
     private licenseService: LicenseService,
     private tenantsService: TenantsService,
+    private storesService: StoresService,
   ) {}
 
   async validateUser(email: string, password: string) {
@@ -78,12 +80,22 @@ export class AuthService {
       }
     }
 
+    let storeId = (user as any).storeId || '';
+    if (roleName !== 'dealer' && tenantId && !storeId) {
+      const stores = await this.storesService.findAll(tenantId);
+      if (stores.length > 0) {
+        storeId = (stores[0]._id as any).toString();
+        await this.usersService.update(user.id, { storeId });
+      }
+    }
+
     return {
       access_token: this.jwtService.sign({
         sub: user.id,
         email: user.email,
         role: user.role?.name,
         tenantId: tenantId,
+        storeId: storeId || undefined,
       }),
       user: {
         id: user.id,
@@ -92,6 +104,7 @@ export class AuthService {
         department: user.department,
         role: user.role?.name,
         tenantId: tenantId,
+        storeId: storeId || undefined,
       },
       license,
     };
@@ -103,9 +116,12 @@ export class AuthService {
     if (existing) throw new BadRequestException('Email already registered');
     
     let tenantId = undefined;
+    let storeId = undefined;
     if (dto.companyName) {
       const tenant = await this.tenantsService.create({ name: dto.companyName });
       tenantId = tenant._id.toString();
+      const store = await this.storesService.create({ name: 'Main Store', location: 'Main Branch' }, tenantId);
+      storeId = (store._id as any).toString();
     }
 
     const hashed = await bcrypt.hash(dto.password, 10);
@@ -116,6 +132,7 @@ export class AuthService {
       department: dto.department,
       roleName: dto.roleName || 'admin',
       tenantId,
+      storeId,
     });
   }
 

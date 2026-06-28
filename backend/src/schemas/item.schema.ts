@@ -40,4 +40,4 @@ export class ItemDocument extends Document {
 
 export const ItemSchema = SchemaFactory.createForClass(ItemDocument);
 ItemSchema.index({ tenantId: 1, sku: 1 }, { unique: true });
-ItemSchema.index({ tenantId: 1, barcode: 1 }, { unique: true, sparse: true });
+ItemSchema.index({ tenantId: 1, barcode: 1 }, { unique: true, partialFilterExpression: { barcode: { $type: 'string' } } });

@@ -19,21 +19,24 @@ export class ReceptionController {
   @UseGuards(RolesGuard)
   @Roles(RoleEnum.RECEPTION, RoleEnum.ADMIN, RoleEnum.MANAGER, RoleEnum.DEALER)
   dashboard(@CurrentUser() user: UserPayload) {
-    return this.reception.getDashboard(user.tenantId);
+    const storeId = (user as any).storeId;
+    return this.reception.getDashboard(user.tenantId, storeId);
   }
 
   @Get('sales/unpaid')
   @UseGuards(RolesGuard)
   @Roles(RoleEnum.RECEPTION, RoleEnum.ADMIN, RoleEnum.MANAGER, RoleEnum.DEALER)
   unpaidSales(@CurrentUser() user: UserPayload) {
-    return this.reception.getUnpaidSales(user.tenantId);
+    const storeId = (user as any).storeId;
+    return this.reception.getUnpaidSales(user.tenantId, storeId);
   }
 
   @Get('sales/today')
   @UseGuards(RolesGuard)
   @Roles(RoleEnum.RECEPTION, RoleEnum.ADMIN, RoleEnum.MANAGER, RoleEnum.DEALER)
   todaysSales(@CurrentUser() user: UserPayload) {
-    return this.reception.getTodaysSales(user.tenantId);
+    const storeId = (user as any).storeId;
+    return this.reception.getTodaysSales(user.tenantId, storeId);
   }
 
   @Post('sell')

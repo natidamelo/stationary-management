@@ -83,6 +83,7 @@ export class ReceptionService {
         notes: o.notes,
         paymentMethod: o.paymentMethod || 'cash',
         tenantId: o.tenantId?.toString(),
+        storeId: o.storeId?.toString(),
       };
     } catch {
       return null;
@@ -97,13 +98,14 @@ export class ReceptionService {
       notes?: string;
       paymentMethod?: string;
     },
-    user: { id: string; tenantId: string },
+    user: { id: string; tenantId: string; storeId?: string },
   ) {
     try {
       if (!body.lines?.length) throw new BadRequestException('At least one line required');
       const cleanTenantId = (user.tenantId || '').trim();
       const tid = toObjectId(cleanTenantId);
       if (!tid && !cleanTenantId) throw new BadRequestException('Invalid tenant ID');
+      const storeId = user.storeId?.toString() || '';
       
       // Validation loop
       for (const l of body.lines) {
@@ -113,7 +115,7 @@ export class ReceptionService {
             $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
           }).select('name sku price costPrice').lean();
           if (!item) throw new BadRequestException(`Item not found for this tenant: ${l.itemId}`);
-          const balance = await this.inventory.getBalance(l.itemId, user.tenantId);
+          const balance = await this.inventory.getBalance(l.itemId, user.tenantId, storeId);
           if (balance < (Number(l.quantity) || 0)) {
             const label = `${item.name} (${item.sku})`;
             throw new BadRequestException(`Insufficient stock for ${label}. Available: ${balance}, requested: ${l.quantity}`);
@@ -186,6 +188,7 @@ export class ReceptionService {
         notes: body.notes,
         paymentMethod: body.paymentMethod || 'cash',
         tenantId: tid || cleanTenantId,
+        storeId: toObjectId(storeId) || undefined,
       });
 
       for (const l of body.lines) {
@@ -229,17 +232,24 @@ export class ReceptionService {
     }
   }
 
-  async getTodaysSales(tenantId: string) {
+  async getTodaysSales(tenantId: string, storeId?: string) {
     const cleanTenantId = (tenantId || '').trim();
     const tid = toObjectId(cleanTenantId);
     if (!tid && !cleanTenantId) return [];
     const start = new Date();
     start.setHours(0, 0, 0, 0);
+
+    const query: any = { 
+      soldAt: { $gte: start }, 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+    };
+
+    if (storeId) {
+      query.storeId = toObjectId(storeId);
+    }
+
     const docs = await this.saleModel
-      .find({ 
-        soldAt: { $gte: start }, 
-        $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
-      })
+      .find(query)
       .populate('lines.itemId', 'name sku')
       .populate('lines.serviceId', 'name')
       .populate('soldById', 'fullName')
@@ -248,15 +258,22 @@ export class ReceptionService {
     return docs.map((d: any) => this.toSale(d)).filter(Boolean);
   }
 
-  async getUnpaidSales(tenantId: string) {
+  async getUnpaidSales(tenantId: string, storeId?: string) {
     const cleanTenantId = (tenantId || '').trim();
     const tid = toObjectId(cleanTenantId);
     if (!tid && !cleanTenantId) return [];
+
+    const query: any = { 
+      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }],
+      $expr: { $lt: [{ $ifNull: ['$amountPaid', '$totalAmount'] }, '$totalAmount'] } 
+    };
+
+    if (storeId) {
+      query.storeId = toObjectId(storeId);
+    }
+
     const docs = await this.saleModel
-      .find({ 
-        $or: [{ tenantId: tid }, { tenantId: cleanTenantId }],
-        $expr: { $lt: [{ $ifNull: ['$amountPaid', '$totalAmount'] }, '$totalAmount'] } 
-      })
+      .find(query)
       .populate('lines.itemId', 'name sku')
       .populate('lines.serviceId', 'name')
       .populate('soldById', 'fullName')
@@ -284,11 +301,11 @@ export class ReceptionService {
     return this.toSale(doc);
   }
 
-  async getDashboard(tenantId: string) {
+  async getDashboard(tenantId: string, storeId?: string) {
     const [todaysSales, lowStock, unpaidSales] = await Promise.all([
-      this.getTodaysSales(tenantId),
-      this.inventory.getLowStockItems(tenantId),
-      this.getUnpaidSales(tenantId),
+      this.getTodaysSales(tenantId, storeId),
+      this.inventory.getLowStockItems(tenantId, storeId),
+      this.getUnpaidSales(tenantId, storeId),
     ]);
     const todayRevenue = todaysSales.reduce((sum, s) => sum + (s?.totalAmount ?? 0), 0);
     return {
@@ -305,7 +322,7 @@ export class ReceptionService {
     saleId: string,
     tenantId: string,
     body: { amount: number; paymentMethod?: string },
-    user: { id: string; tenantId: string },
+    user: { id: string; tenantId: string; storeId?: string },
   ) {
     const cleanTenantId = (tenantId || '').trim();
     const tid = toObjectId(cleanTenantId);

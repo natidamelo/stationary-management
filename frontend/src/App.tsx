@@ -25,6 +25,7 @@ import Licenses from './pages/Licenses';
 import Invoices from './pages/Invoices';
 import AuditLogs from './pages/AuditLogs';
 import RegisteredTenants from './pages/RegisteredTenants';
+import Stores from './pages/Stores';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -216,6 +217,7 @@ function App() {
             <Route path="distribution" element={<Distribution />} />
             <Route path="stock-management" element={<StockManagement />} />
             <Route path="users" element={<Users />} />
+            <Route path="stores" element={<Stores />} />
             <Route path="customers" element={<DealerRoute><Customers /></DealerRoute>} />
             <Route path="registered-tenants" element={<DealerRoute><RegisteredTenants /></DealerRoute>} />
             <Route path="licenses" element={<DealerRoute><Licenses /></DealerRoute>} />

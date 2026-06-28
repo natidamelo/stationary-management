@@ -41,6 +41,7 @@ type UserRow = {
   department?: string;
   role: { name: string };
   isActive: boolean;
+  storeId?: string;
 };
 
 const ROLES = [
@@ -53,6 +54,7 @@ const ROLES = [
 
 export default function Users() {
   const [list, setList] = useState<UserRow[]>([]);
+  const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
@@ -72,6 +74,7 @@ export default function Users() {
     password: '',
     department: '',
     roleName: 'employee',
+    storeId: '',
   });
 
   const fetchUsers = () => {
@@ -83,8 +86,16 @@ export default function Users() {
       .finally(() => setLoading(false));
   };
 
+  const fetchStores = () => {
+    api
+      .get('/stores')
+      .then((r) => setStores(r.data))
+      .catch(() => setStores([]));
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchStores();
   }, []);
 
   const handleOpen = () => {
@@ -95,6 +106,7 @@ export default function Users() {
       password: '',
       department: '',
       roleName: 'employee',
+      storeId: '',
     });
     setOpen(true);
     setError('');
@@ -108,6 +120,7 @@ export default function Users() {
       password: '', // Password not included in edit profile
       department: user.department || '',
       roleName: user.role?.name || 'employee',
+      storeId: user.storeId || '',
     });
     setOpen(true);
     setError('');
@@ -122,19 +135,23 @@ export default function Users() {
     e.preventDefault();
     setSubmitting(true);
     setError('');
+    
+    const payload = {
+      ...formData,
+      storeId: formData.storeId || null,
+    };
+
     try {
       if (editingUser) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { password, ...updateData } = formData;
-        // Ensure no leading slash to avoid absolute path joining issues in axios if baseURL is tricky
+        const { password, ...updateData } = payload;
         await api.put(`/users/${editingUser.id}`, updateData);
       } else {
-        await api.post('/users', formData);
+        await api.post('/users', payload);
       }
       handleClose();
       fetchUsers();
     } catch (err: any) {
-      // If error is just a string (common for Nest 404s before they reach our filter), show it.
       const errorMsg = err.response?.data?.message || err.response?.data || `Failed to ${editingUser ? 'update' : 'create'} user`;
       setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
     } finally {
@@ -181,6 +198,12 @@ export default function Users() {
     } finally {
       setPassSubmitting(false);
     }
+  };
+
+  const getStoreName = (storeId?: string) => {
+    if (!storeId) return 'Global (All)';
+    const s = stores.find((st) => st.id === storeId);
+    return s ? s.name : '-';
   };
 
   return (
@@ -244,6 +267,7 @@ export default function Users() {
               <TableCell>Full Name</TableCell>
               <TableCell>Email Address</TableCell>
               <TableCell>Department</TableCell>
+              <TableCell>Assigned Store</TableCell>
               <TableCell>Role</TableCell>
               <TableCell>Status</TableCell>
               <TableCell align="right">Actions</TableCell>
@@ -252,7 +276,7 @@ export default function Users() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                   <CircularProgress size={24} sx={{ mb: 1 }} />
                   <Typography variant="body2" color="text.secondary">
                     Loading users...
@@ -261,7 +285,7 @@ export default function Users() {
               </TableRow>
             ) : list.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                   <Typography variant="body1" sx={{ mb: 1, fontWeight: 600 }}>
                     No users found
                   </Typography>
@@ -276,6 +300,7 @@ export default function Users() {
                   <TableCell sx={{ fontWeight: 600 }}>{u.fullName}</TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{u.department || '-'}</TableCell>
+                  <TableCell>{getStoreName(u.storeId)}</TableCell>
                   <TableCell>
                     <Chip
                       label={u.role?.name?.toUpperCase() || '-'}
@@ -398,6 +423,22 @@ export default function Users() {
                 {ROLES.map((r) => (
                   <MenuItem key={r.value} value={r.value}>
                     {r.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Assigned Store"
+                fullWidth
+                value={formData.storeId}
+                onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
+              >
+                <MenuItem value="">
+                  <em>Global (All Stores)</em>
+                </MenuItem>
+                {stores.map((s) => (
+                  <MenuItem key={s.id} value={s.id} disabled={!s.isActive}>
+                    {s.name}
                   </MenuItem>
                 ))}
               </TextField>

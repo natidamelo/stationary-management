@@ -23,6 +23,7 @@ function toUser(doc: UserDocument & { role?: RoleDocument } | null) {
     roleId,
     role,
     tenantId: o.tenantId?.toString(),
+    storeId: o.storeId?.toString(),
     createdAt: o.createdAt,
   };
 }
@@ -103,11 +104,13 @@ export class UsersService {
     department?: string;
     roleName: string;
     tenantId?: string;
+    storeId?: string;
   }) {
     const role = await this.roleModel.findOne({ name: data.roleName }).lean();
     if (!role) throw new NotFoundException('Role not found');
     const cleanTenantId = (data.tenantId || '').trim();
     const tid = toObjectId(cleanTenantId);
+    const sid = toObjectId(data.storeId);
     
     const created = await this.userModel.create({
       email: data.email.toLowerCase(),
@@ -116,6 +119,7 @@ export class UsersService {
       department: data.department,
       roleId: role._id,
       tenantId: tid || cleanTenantId || undefined,
+      storeId: sid || undefined,
     });
     return this.findById(created._id.toString());
   }
@@ -145,6 +149,7 @@ export class UsersService {
     department?: string;
     roleName?: string;
     isActive?: boolean;
+    storeId?: string | null;
   }) {
     const uid = toObjectId(userId);
     if (!uid) throw new NotFoundException('User not found');
@@ -157,6 +162,10 @@ export class UsersService {
       if (!role) throw new NotFoundException('Role not found');
       updateData.roleId = role._id;
       delete updateData.roleName;
+    }
+
+    if (data.storeId !== undefined) {
+      updateData.storeId = toObjectId(data.storeId) || null;
     }
 
     const updated = await this.userModel.findByIdAndUpdate(uid, { $set: updateData }, { new: true }).populate('roleId');

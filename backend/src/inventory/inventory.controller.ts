@@ -26,7 +26,8 @@ export class InventoryController {
 
   @Get('balance/:itemId')
   getBalance(@Param('itemId') itemId: string, @CurrentUser() user: UserPayload) {
-    return this.inventory.getBalance(itemId, user.tenantId);
+    const storeId = (user as any).storeId;
+    return this.inventory.getBalance(itemId, user.tenantId, storeId);
   }
 
   @Get('movements')
@@ -35,16 +36,19 @@ export class InventoryController {
     @Query('itemId') itemId?: string,
     @Query('limit') limit?: string,
   ) {
+    const storeId = (user as any).storeId;
     return this.inventory.getMovements(
       user.tenantId,
       itemId,
       limit ? parseInt(limit, 10) : 50,
+      storeId,
     );
   }
 
   @Get('low-stock')
   getLowStock(@CurrentUser() user: UserPayload) {
-    return this.inventory.getLowStockItems(user.tenantId);
+    const storeId = (user as any).storeId;
+    return this.inventory.getLowStockItems(user.tenantId, storeId);
   }
 
   @Post('adjustment')

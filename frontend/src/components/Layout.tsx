@@ -19,6 +19,9 @@ import {
   useTheme,
   Fab,
   Fade,
+  FormControl,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import PointOfSaleRoundedIcon from '@mui/icons-material/PointOfSaleRounded';
@@ -43,12 +46,14 @@ import BusinessRoundedIcon from '@mui/icons-material/BusinessRounded';
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
 import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
+import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useNotifications } from '../context/NotificationsContext';
 import SettingsDialog from './SettingsDialog';
 import GlobalSearch from './GlobalSearch';
+import { api } from '../api/client';
 
 const DRAWER_WIDTH = 272;
 
@@ -71,6 +76,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/invoices': 'Invoices',
   '/services': 'Services',
   '/audit-logs': 'Audit Logs',
+  '/stores': 'Store Management',
 };
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -86,6 +92,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   'Registered Tenants': <BusinessRoundedIcon fontSize="small" />,
   'Licenses': <VpnKeyRoundedIcon fontSize="small" />,
   'User Management': <PeopleRoundedIcon fontSize="small" />,
+  'Stores': <StorefrontRoundedIcon fontSize="small" />,
   'Services': <BuildRoundedIcon fontSize="small" />,
   'Reports': <AssessmentRoundedIcon fontSize="small" />,
   'Invoices': <ReceiptLongRoundedIcon fontSize="small" />,
@@ -108,6 +115,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
   const [showScroll, setShowScroll] = useState(false);
+  const [stores, setStores] = useState<any[]>([]);
 
   const theme = useTheme();
   const { themeMode, toggleTheme } = useSettings();
@@ -118,6 +126,29 @@ export default function Layout() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (user && user.role !== 'dealer') {
+      api.get('/stores')
+        .then((r) => {
+          setStores(r.data);
+        })
+        .catch((err) => console.error('Error fetching stores for select', err));
+    }
+  }, [user]);
+
+  const handleStoreChange = async (storeId: string) => {
+    try {
+      await api.post(`/stores/switch/${storeId}`);
+      if (user) {
+        const updated = { ...user, storeId };
+        localStorage.setItem('user', JSON.stringify(updated));
+      }
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to switch store', err);
+    }
+  };
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -141,6 +172,7 @@ export default function Layout() {
     ...(role === 'dealer' ? [{ to: '/registered-tenants', end: false, label: 'Registered Tenants' }] : []),
     ...(role === 'dealer' ? [{ to: '/licenses', end: false, label: 'Licenses' }] : []),
     ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/users', end: false, label: 'User Management' }] : []),
+    ...(role === 'admin' || role === 'dealer' ? [{ to: '/stores', end: false, label: 'Stores' }] : []),
     ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/services', end: false, label: 'Services' }] : []),
     ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/reports', end: false, label: 'Reports' }] : []),
     ...(role === 'reception' || role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/invoices', end: false, label: 'Invoices' }] : []),
@@ -350,6 +382,29 @@ export default function Layout() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
               <GlobalSearch />
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5, display: { xs: 'none', md: 'block' } }} />
+              
+              {/* Store Switcher Selector */}
+              {stores.length > 0 && (
+                <FormControl size="small" sx={{ minWidth: 150, mr: 0.5 }}>
+                  <Select
+                    value={user?.storeId || ''}
+                    onChange={(e) => handleStoreChange(e.target.value as string)}
+                    displayEmpty
+                    sx={{
+                      borderRadius: 2,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                      '& .MuiSelect-select': { py: '6px', px: 2, fontSize: '0.84rem', fontWeight: 600 },
+                    }}
+                  >
+                    {stores.map((s) => (
+                      <MenuItem key={s.id} value={s.id} disabled={!s.isActive}>
+                        {s.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
               {license?.expiryDate && (
                 <Chip
                   size="small"

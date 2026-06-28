@@ -34,39 +34,56 @@ export class PurchaseRequestsService {
     const o = doc.toObject ? doc.toObject() : doc;
     const requestedBy = (o as any).requestedById;
     const approvedBy = (o as any).approvedById;
+    const store = (o as any).storeId;
+
     const lines = (o.lines || []).map((l: any) => ({
       id: l._id?.toString(),
       itemId: (l.itemId?._id || l.itemId)?.toString?.(),
-      item: l.itemId?.name ? { name: l.itemId.name, sku: l.itemId.sku } : undefined,
+      item: l.itemId?.name ? { name: l.itemId.name, sku: l.itemId.sku, price: l.itemId.price } : undefined,
       quantity: l.quantity,
       reason: l.reason,
     }));
+
+    // Calculate estimated total based on product price * quantity
+    const estimatedTotal = (o.lines || []).reduce((sum: number, l: any) => {
+      const price = l.itemId?.price ?? 0;
+      return sum + (price * (l.quantity ?? 0));
+    }, 0);
+
     return {
       id: (o._id || doc._id)?.toString(),
       requestNumber: o.requestNumber,
       status: o.status,
+      storeId: (store?._id || store)?.toString?.(),
+      store: store?.name ? { name: store.name } : undefined,
       requestedById: (o.requestedById?._id || o.requestedById)?.toString?.(),
-      requestedBy: requestedBy ? { id: requestedBy._id?.toString(), fullName: requestedBy.fullName, email: requestedBy.email } : undefined,
+      requestedBy: requestedBy ? { id: requestedBy._id?.toString(), fullName: requestedBy.fullName, email: requestedBy.email, role: requestedBy.role } : undefined,
       approvedById: (o.approvedById?._id || o.approvedById)?.toString?.(),
       approvedBy: approvedBy ? { fullName: approvedBy.fullName } : undefined,
       approvedAt: o.approvedAt,
       rejectionReason: o.rejectionReason,
       lines,
+      estimatedTotal,
       createdAt: o.createdAt,
       tenantId: o.tenantId?.toString(),
     };
   }
 
-  async create(dto: CreatePurchaseRequestDto, user: { id: string; tenantId: string }) {
+  async create(dto: CreatePurchaseRequestDto, user: { id: string; tenantId: string; storeId?: string }) {
     const cleanTenantId = (user.tenantId || '').trim();
     const tid = toObjectId(cleanTenantId);
     if (!tid && !cleanTenantId) throw new BadRequestException('Tenant ID required');
     
     const requestNumber = await this.nextRequestNumber(user.tenantId);
+    
+    // Default to user's assigned store if not specified
+    const storeIdVal = dto.storeId || user.storeId;
+
     const created = await this.model.create({
       requestNumber,
       status: RequestStatus.DRAFT,
       requestedById: toObjectId(user.id),
+      storeId: toObjectId(storeIdVal) || undefined,
       tenantId: tid || cleanTenantId,
       lines: dto.lines.map((l) => ({
         itemId: toObjectId(l.itemId),
@@ -94,7 +111,7 @@ export class PurchaseRequestsService {
     return this.findOne(id, user.tenantId);
   }
 
-  async findAll(tenantId: string, filters?: { status?: RequestStatus; requestedBy?: string }) {
+  async findAll(tenantId: string, filters?: { status?: RequestStatus; requestedBy?: string; storeId?: string }) {
     const cleanTenantId = (tenantId || '').trim();
     const tid = toObjectId(cleanTenantId);
     if (!tid && !cleanTenantId) return [];
@@ -102,8 +119,15 @@ export class PurchaseRequestsService {
     const q: any = { $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] };
     if (filters?.status) q.status = filters.status;
     if (filters?.requestedBy) q.requestedById = toObjectId(filters.requestedBy);
+    if (filters?.storeId) q.storeId = toObjectId(filters.storeId);
     
-    const docs = await this.model.find(q).populate('requestedById').populate('approvedById').populate('lines.itemId').sort({ createdAt: -1 }).lean();
+    const docs = await this.model.find(q)
+      .populate('requestedById')
+      .populate('approvedById')
+      .populate('lines.itemId')
+      .populate('storeId')
+      .sort({ createdAt: -1 })
+      .lean();
     return docs.map((d: any) => this.toPR(d));
   }
 
@@ -117,7 +141,7 @@ export class PurchaseRequestsService {
       _id: prId, 
       $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
     })
-      .populate('requestedById').populate('approvedById').populate('lines.itemId').lean();
+      .populate('requestedById').populate('approvedById').populate('lines.itemId').populate('storeId').lean();
     if (!doc) throw new NotFoundException('Purchase request not found');
     return this.toPR(doc);
   }

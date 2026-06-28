@@ -25,6 +25,11 @@ export class CreatePurchaseOrderDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsMongoId()
+  storeId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   orderDate?: string;
 

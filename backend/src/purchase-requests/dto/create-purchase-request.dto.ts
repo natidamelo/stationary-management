@@ -20,6 +20,11 @@ export class CreatePurchaseRequestLineDto {
 }
 
 export class CreatePurchaseRequestDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsMongoId()
+  storeId?: string;
+
   @ApiProperty({ type: [CreatePurchaseRequestLineDto] })
   @IsArray()
   @ValidateNested({ each: true })

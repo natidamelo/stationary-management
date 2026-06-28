@@ -46,6 +46,7 @@ import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded';
 import InboxRoundedIcon from '@mui/icons-material/InboxRounded';
 import CallMadeRoundedIcon from '@mui/icons-material/CallMadeRounded';
 import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
+import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -147,6 +148,7 @@ export default function Layout() {
   const topGroup = [
     { to: '/suppliers', label: 'Suppliers', icon: <LocalShippingRoundedIcon fontSize="small" /> },
     { to: '/items', label: 'Products', icon: <InventoryRoundedIcon fontSize="small" /> },
+    { to: '/categories', label: 'Categories', icon: <CategoryRoundedIcon fontSize="small" /> },
     { to: '/customers', label: 'Customers', icon: <GroupRoundedIcon fontSize="small" /> },
   ];
 
@@ -162,6 +164,7 @@ export default function Layout() {
   const adminGroup = [
     ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/users', label: 'Users', icon: <PeopleRoundedIcon fontSize="small" /> }] : []),
     { to: '/messages', label: 'Messages', icon: <ForumRoundedIcon fontSize="small" /> },
+    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/stores', label: 'Stores', icon: <BusinessRoundedIcon fontSize="small" /> }] : []),
     ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/reports', label: 'Reports', icon: <AssessmentRoundedIcon fontSize="small" /> }] : []),
     ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/financial-reports', label: 'Financial Reports', icon: <LocalAtmRoundedIcon fontSize="small" /> }] : []),
   ];

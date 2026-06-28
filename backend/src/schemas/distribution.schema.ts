@@ -23,6 +23,12 @@ export class DistributionDocument extends Document {
   @Prop({ type: Types.ObjectId, ref: 'UserDocument' })
   issuedToUserId: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'StoreDocument' })
+  storeId: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'UserDocument' })
+  issuedById: Types.ObjectId;
+
   @Prop()
   department: string;
 

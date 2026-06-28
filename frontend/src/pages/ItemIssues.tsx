@@ -11,6 +11,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Paper,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -18,16 +19,18 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
-  MenuItem,
   Autocomplete,
   Chip,
   Alert,
-  Paper,
+  InputAdornment,
 } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import RemoveRedEyeRoundedIcon from '@mui/icons-material/RemoveRedEyeRounded';
 import AssignmentTurnedInRoundedIcon from '@mui/icons-material/AssignmentTurnedInRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import { api } from '../api/client';
 
 type IssueLine = {
@@ -41,6 +44,10 @@ type Distribution = {
   distributionNumber: string;
   issuedToUserId?: string;
   issuedToUser?: { id: string; fullName: string };
+  storeId?: string;
+  store?: { id: string; name: string; location?: string };
+  issuedById?: string;
+  issuedBy?: { id: string; fullName: string };
   department?: string;
   notes?: string;
   lines: IssueLine[];
@@ -49,20 +56,20 @@ type Distribution = {
 
 export default function ItemIssues() {
   const [issues, setIssues] = useState<Distribution[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [stores, setStores] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<Distribution | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const [issuedToUserId, setIssuedToUserId] = useState('');
-  const [department, setDepartment] = useState('');
+  const [storeId, setStoreId] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<Array<{ itemId: string; quantity: number }>>([
     { itemId: '', quantity: 1 },
   ]);
-  
+
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -70,7 +77,7 @@ export default function ItemIssues() {
     setLoading(true);
     Promise.all([
       api.get<Distribution[]>('/distribution').then((r) => setIssues(r.data)),
-      api.get<any[]>('/users').then((r) => setUsers(r.data)),
+      api.get<any[]>('/stores').then((r) => setStores(r.data)),
       api.get<any[]>('/items').then((r) => setItems(r.data)),
     ])
       .catch((err) => console.error('Error loading item issues data', err))
@@ -82,8 +89,7 @@ export default function ItemIssues() {
   }, []);
 
   const openAdd = () => {
-    setIssuedToUserId('');
-    setDepartment('');
+    setStoreId('');
     setNotes('');
     setLines([{ itemId: '', quantity: 1 }]);
     setError('');
@@ -104,14 +110,19 @@ export default function ItemIssues() {
     setLines(updated);
   };
 
+  const getAvailableStock = (itemId: string) => {
+    const item = items.find((i) => i.id === itemId);
+    return item?.currentStock ?? item?.quantity ?? 0;
+  };
+
   const saveIssue = async () => {
-    if (!issuedToUserId && !department) {
-      setError('Please provide either a user or department to issue to');
+    if (!storeId) {
+      setError('Please select a destination store');
       return;
     }
     const invalidLine = lines.some((l) => !l.itemId || l.quantity < 1);
     if (invalidLine) {
-      setError('All lines must have a valid item and quantity greater than 0');
+      setError('All lines must have a valid product and quantity greater than 0');
       return;
     }
 
@@ -119,8 +130,7 @@ export default function ItemIssues() {
     setError('');
     try {
       await api.post('/distribution', {
-        issuedToUserId: issuedToUserId || undefined,
-        department: department || undefined,
+        storeId,
         notes,
         lines,
       });
@@ -138,6 +148,16 @@ export default function ItemIssues() {
     setViewModal(true);
   };
 
+  const filteredIssues = issues.filter((d) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      d.distributionNumber.toLowerCase().includes(q) ||
+      (d.store?.name || '').toLowerCase().includes(q) ||
+      (d.issuedToUser?.fullName || '').toLowerCase().includes(q)
+    );
+  });
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
@@ -148,33 +168,65 @@ export default function ItemIssues() {
 
   return (
     <Box sx={{ animation: 'fadeIn 0.3s ease-out', '@keyframes fadeIn': { from: { opacity: 0 }, to: { opacity: 1 } } }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
         <Box>
           <Typography variant="h5" fontWeight={700} sx={{ letterSpacing: '-0.01em' }}>Item Issues</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            Issue stationary products to departments or specific team members
+            Issue inventory stock to registered store locations and log distribution trails.
           </Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openAdd}>
-          New Issue
+        <Button
+          variant="contained"
+          startIcon={<AddRoundedIcon />}
+          onClick={openAdd}
+          sx={{
+            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+            textTransform: 'none',
+            fontWeight: 600,
+            borderRadius: 2,
+            px: 3,
+            py: 1,
+            '&:hover': { background: 'linear-gradient(135deg, #4338ca, #6d28d9)' },
+          }}
+        >
+          Issue Items
         </Button>
       </Box>
 
-      <Card>
+      {/* Search Bar */}
+      <TextField
+        fullWidth
+        size="small"
+        placeholder="Search issue records by number, store name, code."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon sx={{ color: 'text.disabled', fontSize: 20 }} />
+            </InputAdornment>
+          ),
+        }}
+        sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.paper' } }}
+      />
+
+      {/* Issues Table */}
+      <Card sx={{ borderRadius: 2, overflow: 'hidden' }}>
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
+              <TableRow sx={{ '& th': { fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' } }}>
                 <TableCell>Issue Number</TableCell>
-                <TableCell>Issued To</TableCell>
-                <TableCell>Department</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Total Products</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>Destination Store</TableCell>
+                <TableCell>Items Count</TableCell>
+                <TableCell>Issued By</TableCell>
+                <TableCell>Fulfillment Date</TableCell>
+                <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {issues.length === 0 ? (
+              {filteredIssues.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                     <AssignmentTurnedInRoundedIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1, opacity: 0.5 }} />
@@ -182,17 +234,36 @@ export default function ItemIssues() {
                   </TableCell>
                 </TableRow>
               ) : (
-                issues.map((d) => (
-                  <TableRow key={d.id}>
+                filteredIssues.map((d) => (
+                  <TableRow key={d.id} hover sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
                     <TableCell sx={{ fontWeight: 600 }}>{d.distributionNumber}</TableCell>
-                    <TableCell>{d.issuedToUser?.fullName || '-'}</TableCell>
-                    <TableCell>{d.department || '-'}</TableCell>
-                    <TableCell>{new Date(d.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>{d.lines.reduce((acc, l) => acc + l.quantity, 0)} items</TableCell>
-                    <TableCell align="right">
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" fontWeight={500}>{d.store?.name || d.issuedToUser?.fullName || '-'}</Typography>
+                        {d.store && (
+                          <Chip
+                            label={d.store.location || 'Store'}
+                            size="small"
+                            sx={{ fontWeight: 600, fontSize: '0.65rem', bgcolor: '#e0e7ff', color: '#4f46e5' }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>{d.lines.length} products</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        👤 {d.issuedBy?.fullName || d.issuedToUser?.fullName || 'System'}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        📅 {new Date(d.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center">
                       <Tooltip title="View Details">
-                        <IconButton size="small" onClick={() => openView(d)} color="primary">
-                          <RemoveRedEyeRoundedIcon fontSize="small" />
+                        <IconButton size="small" onClick={() => openView(d)}>
+                          <RemoveRedEyeRoundedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
@@ -204,116 +275,197 @@ export default function ItemIssues() {
         </TableContainer>
       </Card>
 
-      {/* Add Issue Dialog */}
-      <Dialog open={modal} onClose={() => setModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>Issue Stationary Products</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
+      {/* Issue Items to Store Dialog */}
+      <Dialog
+        open={modal}
+        onClose={() => setModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          Issue Items to Store
+          <IconButton size="small" onClick={() => setModal(false)}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1, mb: 3 }}>
-            <TextField
-              select
-              label="Issue To User"
-              fullWidth
-              value={issuedToUserId}
-              onChange={(e) => setIssuedToUserId(e.target.value)}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {users.map((u) => (
-                <MenuItem key={u.id} value={u.id}>
-                  {u.fullName} ({u.email})
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Department"
-              fullWidth
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-            />
+
+          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+            Destination Store <span style={{ color: '#ef4444' }}>*</span>
+          </Typography>
+          <TextField
+            select
+            fullWidth
+            size="small"
+            value={storeId}
+            onChange={(e) => setStoreId(e.target.value)}
+            SelectProps={{ native: true }}
+            sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          >
+            <option value="">Select Destination Store</option>
+            {stores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}{s.location ? ` — ${s.location}` : ''}
+              </option>
+            ))}
+          </TextField>
+
+          {/* Products to Issue */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>
+              Products to Issue
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button size="small" startIcon={<QrCodeScannerIcon />} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+                Scan Item
+              </Button>
+              <Button size="small" startIcon={<AddRoundedIcon />} onClick={handleAddLine} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+                Add Item
+              </Button>
+            </Box>
           </Box>
 
-          <TextField
-            label="Notes / Purpose"
-            fullWidth
-            margin="normal"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            sx={{ mb: 3 }}
-          />
-
-          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Issue Items</Typography>
           {lines.map((line, index) => (
-            <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-              <Autocomplete
-                options={items}
-                getOptionLabel={(option) => `${option.name} (${option.sku})`}
-                renderInput={(params) => <TextField {...params} label="Select Stationary" required size="small" />}
-                sx={{ flex: 1 }}
-                value={items.find((i) => i.id === line.itemId) || null}
-                onChange={(_, newValue) => handleLineChange(index, 'itemId', newValue?.id || '')}
-              />
-              <TextField
-                label="Qty"
-                type="number"
-                required
-                size="small"
-                sx={{ width: 100 }}
-                value={line.quantity}
-                onChange={(e) => handleLineChange(index, 'quantity', parseInt(e.target.value, 10) || 1)}
-              />
-              <IconButton color="error" disabled={lines.length === 1} onClick={() => handleRemoveLine(index)}>
-                <DeleteRoundedIcon />
-              </IconButton>
+            <Box key={index} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', mb: 2 }}>
+              <Box sx={{ flex: 1 }}>
+                {index === 0 && (
+                  <Typography variant="caption" fontWeight={600} sx={{ mb: 0.5, display: 'block', textTransform: 'uppercase', fontSize: '0.65rem', color: 'text.secondary' }}>
+                    Product <span style={{ color: '#ef4444' }}>*</span>
+                  </Typography>
+                )}
+                <Autocomplete
+                  options={items}
+                  getOptionLabel={(option) => `${option.name} (${option.sku})`}
+                  renderInput={(params) => <TextField {...params} placeholder="Select Product" size="small" />}
+                  value={items.find((i) => i.id === line.itemId) || null}
+                  onChange={(_, newValue) => handleLineChange(index, 'itemId', newValue?.id || '')}
+                  size="small"
+                />
+              </Box>
+              <Box sx={{ width: 80 }}>
+                {index === 0 && (
+                  <Typography variant="caption" fontWeight={600} sx={{ mb: 0.5, display: 'block', textTransform: 'uppercase', fontSize: '0.65rem', color: 'text.secondary' }}>
+                    Available
+                  </Typography>
+                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 40, bgcolor: '#f1f5f9', borderRadius: 1, px: 1 }}>
+                  <Typography variant="caption" fontWeight={600} color="text.secondary">
+                    {line.itemId ? `${getAvailableStock(line.itemId)} units` : '0 units'}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ width: 70 }}>
+                {index === 0 && (
+                  <Typography variant="caption" fontWeight={600} sx={{ mb: 0.5, display: 'block', textTransform: 'uppercase', fontSize: '0.65rem', color: 'text.secondary' }}>
+                    Qty <span style={{ color: '#ef4444' }}>*</span>
+                  </Typography>
+                )}
+                <TextField
+                  type="number"
+                  size="small"
+                  value={line.quantity}
+                  onChange={(e) => handleLineChange(index, 'quantity', parseInt(e.target.value, 10) || 1)}
+                  inputProps={{ min: 1 }}
+                />
+              </Box>
+              <Box sx={{ pt: index === 0 ? 2.5 : 0 }}>
+                <IconButton
+                  size="small"
+                  color="default"
+                  disabled={lines.length === 1}
+                  onClick={() => handleRemoveLine(index)}
+                >
+                  <DeleteRoundedIcon fontSize="small" />
+                </IconButton>
+              </Box>
             </Box>
           ))}
-          <Button startIcon={<AddRoundedIcon />} onClick={handleAddLine} sx={{ mt: 1 }}>Add Stationary</Button>
+
+          {/* Issuance Notes */}
+          <Typography variant="body2" fontWeight={600} sx={{ mt: 2, mb: 0.5 }}>Issuance Notes</Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={2}
+            size="small"
+            placeholder="Reason for issuance, department reference, or logistics notes..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          />
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setModal(false)}>Cancel</Button>
-          <Button onClick={saveIssue} variant="contained" disabled={submitting}>
-            Record Item Issue
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button
+            onClick={saveIssue}
+            variant="contained"
+            disabled={submitting}
+            startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{
+              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: 2,
+              px: 3,
+              '&:hover': { background: 'linear-gradient(135deg, #4338ca, #6d28d9)' },
+              '&.Mui-disabled': { background: '#e5e7eb', color: '#9ca3af' },
+            }}
+          >
+            Issue Items
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* View Issue Details Dialog */}
-      <Dialog open={viewModal} onClose={() => setViewModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>Issue Details: {selectedIssue?.distributionNumber}</DialogTitle>
-        <DialogContent sx={{ pt: 1.5 }}>
-          {selectedIssue && (
-            <>
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
+      <Dialog
+        open={viewModal}
+        onClose={() => setViewModal(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        {selectedIssue && (
+          <>
+            <DialogTitle sx={{ fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+              Issue Details — {selectedIssue.distributionNumber}
+              <IconButton size="small" onClick={() => setViewModal(false)}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent sx={{ pt: 2 }}>
+              <Box sx={{ display: 'flex', gap: 4, mb: 3, flexWrap: 'wrap' }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary">Issued To</Typography>
-                  <Typography variant="body1" fontWeight={600}>{selectedIssue.issuedToUser?.fullName || '-'}</Typography>
+                  <Typography variant="caption" color="text.secondary">Destination Store</Typography>
+                  <Typography variant="body2" fontWeight={600}>{selectedIssue.store?.name || '-'}</Typography>
                 </Box>
                 <Box>
-                  <Typography variant="caption" color="text.secondary">Department</Typography>
-                  <Typography variant="body1" fontWeight={600}>{selectedIssue.department || '-'}</Typography>
+                  <Typography variant="caption" color="text.secondary">Issued By</Typography>
+                  <Typography variant="body2" fontWeight={600}>{selectedIssue.issuedBy?.fullName || selectedIssue.issuedToUser?.fullName || '-'}</Typography>
                 </Box>
                 <Box>
                   <Typography variant="caption" color="text.secondary">Date Issued</Typography>
-                  <Typography variant="body2">{new Date(selectedIssue.createdAt).toLocaleString()}</Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    {new Date(selectedIssue.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                  </Typography>
                 </Box>
               </Box>
 
               {selectedIssue.notes && (
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="caption" color="text.secondary">Notes / Purpose</Typography>
-                  <Typography variant="body2" sx={{ bgcolor: 'action.hover', p: 1.5, borderRadius: 1 }}>
+                  <Typography variant="caption" color="text.secondary">Issuance Notes</Typography>
+                  <Typography variant="body2" sx={{ bgcolor: '#f8fafc', p: 1.5, borderRadius: 1.5, border: '1px solid', borderColor: 'divider', mt: 0.5 }}>
                     {selectedIssue.notes}
                   </Typography>
                 </Box>
               )}
 
-              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Issued Items List</Typography>
-              <TableContainer component={Paper} outlined elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                 <Table size="small">
                   <TableHead>
-                    <TableRow>
+                    <TableRow sx={{ '& th': { fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', color: 'text.secondary' } }}>
                       <TableCell>Item Name</TableCell>
+                      <TableCell>SKU</TableCell>
                       <TableCell align="right">Qty Issued</TableCell>
                     </TableRow>
                   </TableHead>
@@ -321,18 +473,27 @@ export default function ItemIssues() {
                     {selectedIssue.lines.map((l, index) => (
                       <TableRow key={index}>
                         <TableCell sx={{ fontWeight: 500 }}>{l.item?.name || 'Unknown Item'}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600 }}>{l.quantity}</TableCell>
+                        <TableCell>{l.item?.sku || '-'}</TableCell>
+                        <TableCell align="right">
+                          <Chip
+                            label={l.quantity}
+                            size="small"
+                            sx={{ fontWeight: 600, fontSize: '0.75rem', bgcolor: '#dcfce7', color: '#16a34a' }}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setViewModal(false)}>Close</Button>
-        </DialogActions>
+            </DialogContent>
+            <DialogActions sx={{ p: 3, pt: 1 }}>
+              <Button onClick={() => setViewModal(false)} variant="outlined" sx={{ textTransform: 'none', borderRadius: 2 }}>
+                Close
+              </Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
     </Box>
   );

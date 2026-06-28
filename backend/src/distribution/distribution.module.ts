@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { DistributionDocument, DistributionSchema } from '../schemas/distribution.schema';
 import { ItemDocument, ItemSchema } from '../schemas/item.schema';
 import { UserDocument, UserSchema } from '../schemas/user.schema';
+import { StoreDocument, StoreSchema } from '../schemas/store.schema';
 import { DistributionService } from './distribution.service';
 import { DistributionController } from './distribution.controller';
 import { InventoryModule } from '../inventory/inventory.module';
@@ -13,6 +14,7 @@ import { InventoryModule } from '../inventory/inventory.module';
       { name: DistributionDocument.name, schema: DistributionSchema },
       { name: ItemDocument.name, schema: ItemSchema },
       { name: UserDocument.name, schema: UserSchema },
+      { name: StoreDocument.name, schema: StoreSchema },
     ]),
     InventoryModule,
   ],

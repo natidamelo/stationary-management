@@ -29,6 +29,8 @@ export class DistributionService {
     if (!doc) return null;
     const o = doc.toObject ? doc.toObject() : doc;
     const issuedToUser = (o as any).issuedToUserId;
+    const store = (o as any).storeId;
+    const issuedBy = (o as any).issuedById;
     const lines = (o.lines || []).map((l: any) => ({
       id: l._id?.toString(),
       itemId: (l.itemId?._id || l.itemId)?.toString?.(),
@@ -40,6 +42,10 @@ export class DistributionService {
       distributionNumber: o.distributionNumber,
       issuedToUserId: (o.issuedToUserId?._id || o.issuedToUserId)?.toString?.(),
       issuedToUser: issuedToUser ? { id: issuedToUser._id?.toString(), fullName: issuedToUser.fullName } : undefined,
+      storeId: (o.storeId?._id || o.storeId)?.toString?.(),
+      store: store?.name ? { id: store._id?.toString(), name: store.name, location: store.location } : undefined,
+      issuedById: (o.issuedById?._id || o.issuedById)?.toString?.(),
+      issuedBy: issuedBy?.fullName ? { id: issuedBy._id?.toString(), fullName: issuedBy.fullName } : undefined,
       department: o.department,
       notes: o.notes,
       lines,
@@ -49,7 +55,7 @@ export class DistributionService {
   }
 
   async issue(
-    body: { issuedToUserId?: string; department?: string; notes?: string; lines: { itemId: string; quantity: number }[] },
+    body: { issuedToUserId?: string; storeId?: string; department?: string; notes?: string; lines: { itemId: string; quantity: number }[] },
     user: { id: string; tenantId: string },
   ) {
     const cleanTenantId = (user.tenantId || '').trim();
@@ -60,6 +66,8 @@ export class DistributionService {
     const created = await this.model.create({
       distributionNumber: distNumber,
       issuedToUserId: toObjectId(body.issuedToUserId) || undefined,
+      storeId: toObjectId(body.storeId) || undefined,
+      issuedById: toObjectId(user.id) || undefined,
       department: body.department,
       notes: body.notes,
       tenantId: tid || cleanTenantId,
@@ -83,7 +91,7 @@ export class DistributionService {
     
     const docs = await this.model.find({ 
       $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
-    }).populate('issuedToUserId').populate('lines.itemId').sort({ createdAt: -1 }).lean();
+    }).populate('issuedToUserId').populate('storeId').populate('issuedById').populate('lines.itemId').sort({ createdAt: -1 }).lean();
     return docs.map((d: any) => this.toDist(d));
   }
 
@@ -97,7 +105,7 @@ export class DistributionService {
       _id: did, 
       $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
     })
-      .populate('issuedToUserId').populate('lines.itemId').lean();
+      .populate('issuedToUserId').populate('storeId').populate('issuedById').populate('lines.itemId').lean();
     if (!doc) throw new NotFoundException('Distribution not found');
     return this.toDist(doc);
   }

@@ -20,6 +20,9 @@ export class PurchaseRequestDocument extends Document {
   @Prop({ type: Types.ObjectId, ref: 'TenantDocument' })
   tenantId: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'StoreDocument' })
+  storeId: Types.ObjectId;
+
   @Prop({ required: true })
   requestNumber: string;
 

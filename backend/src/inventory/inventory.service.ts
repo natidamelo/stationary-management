@@ -36,7 +36,7 @@ export class InventoryService {
     let balance = 0;
     for (const m of docs) {
       const q = Number(m.quantity) || 0;
-      if (m.type === StockMovementType.PURCHASE || m.type === StockMovementType.RETURN || m.type === StockMovementType.ADJUSTMENT || m.type === 'adjustment')
+      if (m.type === StockMovementType.PURCHASE || m.type === StockMovementType.RETURN || m.type === StockMovementType.ADJUSTMENT || m.type === 'adjustment' || m.type === StockMovementType.TRANSFER_IN || m.type === 'transfer_in')
         balance += q;
       else
         balance -= q;
@@ -61,7 +61,7 @@ export class InventoryService {
     for (const m of docs) {
       const id = (m.itemId as Types.ObjectId).toString();
       if (!(id in out)) continue;
-      if (m.type === StockMovementType.PURCHASE || m.type === StockMovementType.RETURN || m.type === 'adjustment')
+      if (m.type === StockMovementType.PURCHASE || m.type === StockMovementType.RETURN || m.type === 'adjustment' || m.type === StockMovementType.TRANSFER_IN || m.type === 'transfer_in')
         out[id] += m.quantity;
       else
         out[id] -= m.quantity;
@@ -97,7 +97,7 @@ export class InventoryService {
       
       const current = await this.getBalance(itemId, tenantId, storeId);
       const qtyNum = Number(quantity) || 0;
-      const isIn = type === StockMovementType.PURCHASE || type === StockMovementType.RETURN;
+      const isIn = type === StockMovementType.PURCHASE || type === StockMovementType.RETURN || type === StockMovementType.TRANSFER_IN;
       const delta = type === StockMovementType.ADJUSTMENT ? qtyNum : isIn ? qtyNum : -qtyNum;
       
       const newBalance = (Number(current) || 0) + delta;

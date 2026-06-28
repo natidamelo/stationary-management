@@ -26,27 +26,27 @@ import {
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import PointOfSaleRoundedIcon from '@mui/icons-material/PointOfSaleRounded';
 import InventoryRoundedIcon from '@mui/icons-material/InventoryRounded';
-import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded';
 import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded';
 import ShoppingCartRoundedIcon from '@mui/icons-material/ShoppingCartRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
-import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
 import VpnKeyRoundedIcon from '@mui/icons-material/VpnKeyRounded';
-import BuildRoundedIcon from '@mui/icons-material/BuildRounded';
 import AssessmentRoundedIcon from '@mui/icons-material/AssessmentRounded';
 import NotificationsNoneRoundedIcon from '@mui/icons-material/NotificationsNoneRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
-import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import BusinessRoundedIcon from '@mui/icons-material/BusinessRounded';
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
 import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
-import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded';
+import LocalAtmRoundedIcon from '@mui/icons-material/LocalAtmRounded';
+import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded';
+import InboxRoundedIcon from '@mui/icons-material/InboxRounded';
+import CallMadeRoundedIcon from '@mui/icons-material/CallMadeRounded';
+import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -59,11 +59,11 @@ const DRAWER_WIDTH = 272;
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
-  '/items': 'Items',
+  '/items': 'Products',
   '/categories': 'Categories',
   '/suppliers': 'Suppliers',
   '/purchase-orders': 'Purchase Orders',
-  '/purchase-requests': 'My Requests',
+  '/purchase-requests': 'Purchase Requisitions',
   '/stock-management': 'Stock Management',
   '/inventory': 'Inventory',
   '/distribution': 'Distribution',
@@ -72,31 +72,16 @@ const PAGE_TITLES: Record<string, string> = {
   '/registered-tenants': 'Registered Tenants',
   '/licenses': 'Licenses',
   '/reports': 'Reports',
-  '/reception': 'Reception',
+  '/reception': 'Sales Reception',
   '/invoices': 'Invoices',
   '/services': 'Services',
   '/audit-logs': 'Audit Logs',
   '/stores': 'Store Management',
-};
-
-const NAV_ICONS: Record<string, React.ReactNode> = {
-  'Dashboard': <DashboardRoundedIcon fontSize="small" />,
-  'Reception': <PointOfSaleRoundedIcon fontSize="small" />,
-  'Stock Management': <InventoryRoundedIcon fontSize="small" />,
-  'Categories': <CategoryRoundedIcon fontSize="small" />,
-  'Suppliers': <LocalShippingRoundedIcon fontSize="small" />,
-  'Purchase Orders': <ShoppingCartRoundedIcon fontSize="small" />,
-  'My Requests': <AssignmentRoundedIcon fontSize="small" />,
-  'Approvals': <CheckCircleRoundedIcon fontSize="small" />,
-  'Customers': <GroupRoundedIcon fontSize="small" />,
-  'Registered Tenants': <BusinessRoundedIcon fontSize="small" />,
-  'Licenses': <VpnKeyRoundedIcon fontSize="small" />,
-  'User Management': <PeopleRoundedIcon fontSize="small" />,
-  'Stores': <StorefrontRoundedIcon fontSize="small" />,
-  'Services': <BuildRoundedIcon fontSize="small" />,
-  'Reports': <AssessmentRoundedIcon fontSize="small" />,
-  'Invoices': <ReceiptLongRoundedIcon fontSize="small" />,
-  'Audit Logs': <SecurityRoundedIcon fontSize="small" />,
+  '/store-transfers': 'Store Transfers',
+  '/goods-receiving': 'Goods Receiving',
+  '/item-issues': 'Item Issues',
+  '/financial-reports': 'Financial Reports',
+  '/messages': 'Messages',
 };
 
 function formatDate() {
@@ -159,28 +144,77 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const navLinks = [
-    { to: '/', end: true, label: 'Dashboard' },
-    ...(role === 'reception' || role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/reception', end: false, label: 'Reception' }] : []),
-    { to: '/stock-management', end: false, label: 'Stock Management' },
-    { to: '/categories', end: false, label: 'Categories' },
-    { to: '/suppliers', end: false, label: 'Suppliers' },
-    { to: '/purchase-orders', end: false, label: 'Purchase Orders' },
-    { to: '/purchase-requests', end: false, label: 'My Requests' },
-    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/purchase-requests?pending=1', end: false, label: 'Approvals' }] : []),
-    ...(role === 'dealer' ? [{ to: '/customers', end: false, label: 'Customers' }] : []),
-    ...(role === 'dealer' ? [{ to: '/registered-tenants', end: false, label: 'Registered Tenants' }] : []),
-    ...(role === 'dealer' ? [{ to: '/licenses', end: false, label: 'Licenses' }] : []),
-    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/users', end: false, label: 'User Management' }] : []),
-    ...(role === 'admin' || role === 'dealer' ? [{ to: '/stores', end: false, label: 'Stores' }] : []),
-    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/services', end: false, label: 'Services' }] : []),
-    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/reports', end: false, label: 'Reports' }] : []),
-    ...(role === 'reception' || role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/invoices', end: false, label: 'Invoices' }] : []),
-    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/audit-logs', end: false, label: 'Audit Logs' }] : []),
+  const topGroup = [
+    { to: '/suppliers', label: 'Suppliers', icon: <LocalShippingRoundedIcon fontSize="small" /> },
+    { to: '/items', label: 'Products', icon: <InventoryRoundedIcon fontSize="small" /> },
+    { to: '/customers', label: 'Customers', icon: <GroupRoundedIcon fontSize="small" /> },
   ];
 
+  const transactionsGroup = [
+    { to: '/purchase-requests', label: 'Requisitions', icon: <AssignmentRoundedIcon fontSize="small" /> },
+    { to: '/purchase-orders', label: 'Orders', icon: <ShoppingCartRoundedIcon fontSize="small" /> },
+    { to: '/goods-receiving', label: 'Goods Receiving', icon: <InboxRoundedIcon fontSize="small" /> },
+    { to: '/item-issues', label: 'Item Issues', icon: <CallMadeRoundedIcon fontSize="small" /> },
+    { to: '/store-transfers', label: 'Store Transfers', icon: <SwapHorizRoundedIcon fontSize="small" /> },
+    ...(role === 'reception' || role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/reception', label: 'Sales', icon: <PointOfSaleRoundedIcon fontSize="small" /> }] : []),
+  ];
+
+  const adminGroup = [
+    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/users', label: 'Users', icon: <PeopleRoundedIcon fontSize="small" /> }] : []),
+    { to: '/messages', label: 'Messages', icon: <ForumRoundedIcon fontSize="small" /> },
+    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/reports', label: 'Reports', icon: <AssessmentRoundedIcon fontSize="small" /> }] : []),
+    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/financial-reports', label: 'Financial Reports', icon: <LocalAtmRoundedIcon fontSize="small" /> }] : []),
+  ];
+
+  const dealerGroup = [
+    ...(role === 'dealer' ? [
+      { to: '/registered-tenants', label: 'Registered Tenants', icon: <BusinessRoundedIcon fontSize="small" /> },
+      { to: '/licenses', label: 'Licenses', icon: <VpnKeyRoundedIcon fontSize="small" /> }
+    ] : []),
+  ];
+
+  const renderLink = (link: { to: string; label: string; icon: React.ReactNode }) => (
+    <NavLink key={link.to + link.label} to={link.to} end={link.to === '/'} style={{ textDecoration: 'none', color: 'inherit' }}>
+      {({ isActive }) => (
+        <ListItemButton
+          selected={isActive}
+          sx={{
+            borderRadius: 2,
+            mb: 0.3,
+            py: 0.8,
+            px: 1.25,
+            minHeight: 40,
+            transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+            '&.Mui-selected': {
+              bgcolor: '#eef2ff',
+              '&:hover': { bgcolor: '#e0e7ff' },
+              '& .MuiListItemIcon-root': { color: '#4f46e5' },
+              '& .MuiListItemText-primary': { color: '#4f46e5', fontWeight: 600 },
+            },
+            '&:hover': {
+              bgcolor: '#f1f5f9',
+            },
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 34, color: isActive ? '#4f46e5' : '#64748b' }}>
+            {link.icon}
+          </ListItemIcon>
+          <ListItemText
+            primary={link.label}
+            primaryTypographyProps={{
+              fontSize: '0.84rem',
+              fontWeight: isActive ? 600 : 500,
+              color: isActive ? '#4f46e5' : '#475569',
+              sx: { transition: 'color 0.15s ease' },
+            }}
+          />
+        </ListItemButton>
+      )}
+    </NavLink>
+  );
+
   const drawerContent = (
-    <>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box sx={{ p: 2.5, pb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
         {settings.logoUrl ? (
           <Box
@@ -214,16 +248,16 @@ export default function Layout() {
         )}
         <Box>
           <Typography variant="subtitle2" fontWeight={700} sx={{ lineHeight: 1.2, color: '#1e293b', letterSpacing: '-0.01em' }}>
-            {settings.stationeryName}
+            {settings.stationeryName || 'WOUBREX PLC'}
           </Typography>
           <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
-            Management System
+            Stock Management System
           </Typography>
         </Box>
       </Box>
 
       {/* User card */}
-      <Box sx={{ mx: 2, mb: 1.5, p: 1.5, borderRadius: 2.5, background: '#fff', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <Box sx={{ mx: 2, mb: 1.5, p: 1.5, borderRadius: 2.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1.5 }}>
         <Avatar
           sx={{
             width: 38,
@@ -237,7 +271,7 @@ export default function Layout() {
           {(user?.fullName ?? 'U').charAt(0).toUpperCase()}
         </Avatar>
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={600} sx={{ color: '#1e293b', fontSize: '0.85rem', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary', fontSize: '0.85rem', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {user?.fullName}
           </Typography>
           <Chip
@@ -258,55 +292,55 @@ export default function Layout() {
       </Box>
 
       {/* Navigation */}
-      <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', px: 1.5, py: 1, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { background: '#d1d5db', borderRadius: 2 } }}>
-        <Typography variant="overline" sx={{ color: '#94a3b8', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', px: 1, mb: 0.5, display: 'block' }}>
-          NAVIGATION
-        </Typography>
+      <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 1, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { background: '#d1d5db', borderRadius: 2 } }}>
         <List sx={{ py: 0 }}>
-          {navLinks.map((link) => (
-            <NavLink key={link.to + link.label} to={link.to} end={link.end as boolean} style={{ textDecoration: 'none', color: 'inherit' }}>
-              {({ isActive }) => (
-                <ListItemButton
-                  selected={isActive}
-                  sx={{
-                    borderRadius: 2,
-                    mb: 0.3,
-                    py: 0.85,
-                    px: 1.25,
-                    minHeight: 40,
-                    transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-                    '&.Mui-selected': {
-                      bgcolor: '#eef2ff',
-                      '&:hover': { bgcolor: '#e0e7ff' },
-                      '& .MuiListItemIcon-root': { color: '#4f46e5' },
-                      '& .MuiListItemText-primary': { color: '#4f46e5', fontWeight: 600 },
-                    },
-                    '&:hover': {
-                      bgcolor: '#f1f5f9',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 34, color: isActive ? '#4f46e5' : '#94a3b8' }}>
-                    {NAV_ICONS[link.label] || <DashboardRoundedIcon fontSize="small" />}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={link.label}
-                    primaryTypographyProps={{
-                      fontSize: '0.84rem',
-                      fontWeight: isActive ? 600 : 500,
-                      color: isActive ? '#4f46e5' : '#475569',
-                      sx: { transition: 'color 0.15s ease' },
-                    }}
-                  />
-                </ListItemButton>
-              )}
-            </NavLink>
-          ))}
+          {/* Dashboard link directly */}
+          {renderLink({ to: '/', label: 'Dashboard', icon: <DashboardRoundedIcon fontSize="small" /> })}
+          
+          {topGroup.map(renderLink)}
+
+          <Typography variant="overline" sx={{ color: '#94a3b8', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', px: 1.25, mt: 2, mb: 0.5, display: 'block' }}>
+            TRANSACTIONS & SALES
+          </Typography>
+          {transactionsGroup.map(renderLink)}
+
+          <Typography variant="overline" sx={{ color: '#94a3b8', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', px: 1.25, mt: 2, mb: 0.5, display: 'block' }}>
+            ADMIN & REPORTS
+          </Typography>
+          {adminGroup.map(renderLink)}
+
+          {dealerGroup.length > 0 && (
+            <>
+              <Typography variant="overline" sx={{ color: '#94a3b8', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', px: 1.25, mt: 2, mb: 0.5, display: 'block' }}>
+                DEALER ACTIONS
+              </Typography>
+              {dealerGroup.map(renderLink)}
+            </>
+          )}
+
+          {/* Settings in Sidebar */}
+          <ListItemButton
+            onClick={() => setSettingsOpen(true)}
+            sx={{
+              borderRadius: 2,
+              mb: 0.3,
+              mt: 2,
+              py: 0.8,
+              px: 1.25,
+              minHeight: 40,
+              '&:hover': { bgcolor: '#f1f5f9' },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 34, color: '#64748b' }}>
+              <SettingsRoundedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Settings" primaryTypographyProps={{ fontSize: '0.84rem', fontWeight: 500, color: '#475569' }} />
+          </ListItemButton>
         </List>
       </Box>
 
       {/* Logout */}
-      <Box sx={{ p: 2, borderTop: '1px solid #e5e7eb' }}>
+      <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
         <ListItemButton
           onClick={handleLogout}
           sx={{
@@ -316,13 +350,13 @@ export default function Layout() {
             '&:hover': { bgcolor: '#fef2f2', '& .MuiListItemIcon-root': { color: '#dc2626' }, '& .MuiListItemText-primary': { color: '#dc2626' } },
           }}
         >
-          <ListItemIcon sx={{ minWidth: 34, color: '#94a3b8' }}>
+          <ListItemIcon sx={{ minWidth: 34, color: '#64748b' }}>
             <LogoutRoundedIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Sign out" primaryTypographyProps={{ fontSize: '0.84rem', fontWeight: 500, color: '#64748b' }} />
+          <ListItemText primary="Logout" primaryTypographyProps={{ fontSize: '0.84rem', fontWeight: 500, color: '#64748b' }} />
         </ListItemButton>
       </Box>
-    </>
+    </Box>
   );
 
   return (

@@ -30,4 +30,6 @@ export enum StockMovementType {
   DAMAGE = 'damage',
   TRANSFER = 'transfer',
   SALE = 'sale',
+  TRANSFER_IN = 'transfer_in',
+  TRANSFER_OUT = 'transfer_out',
 }

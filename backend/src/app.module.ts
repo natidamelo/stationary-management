@@ -26,6 +26,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TenantsModule } from './tenants/tenants.module';
 import { StoresModule } from './stores/stores.module';
+import { StoreTransfersModule } from './store-transfers/store-transfers.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { StoresModule } from './stores/stores.module';
     AuditLogModule,
     TenantsModule,
     StoresModule,
+    StoreTransfersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

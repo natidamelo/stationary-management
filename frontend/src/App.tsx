@@ -26,6 +26,11 @@ import Invoices from './pages/Invoices';
 import AuditLogs from './pages/AuditLogs';
 import RegisteredTenants from './pages/RegisteredTenants';
 import Stores from './pages/Stores';
+import StoreTransfers from './pages/StoreTransfers';
+import GoodsReceiving from './pages/GoodsReceiving';
+import ItemIssues from './pages/ItemIssues';
+import FinancialReports from './pages/FinancialReports';
+import Messages from './pages/Messages';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -218,7 +223,12 @@ function App() {
             <Route path="stock-management" element={<StockManagement />} />
             <Route path="users" element={<Users />} />
             <Route path="stores" element={<Stores />} />
-            <Route path="customers" element={<DealerRoute><Customers /></DealerRoute>} />
+            <Route path="store-transfers" element={<StoreTransfers />} />
+            <Route path="goods-receiving" element={<GoodsReceiving />} />
+            <Route path="item-issues" element={<ItemIssues />} />
+            <Route path="financial-reports" element={<FinancialReports />} />
+            <Route path="messages" element={<Messages />} />
+            <Route path="customers" element={<Customers />} />
             <Route path="registered-tenants" element={<DealerRoute><RegisteredTenants /></DealerRoute>} />
             <Route path="licenses" element={<DealerRoute><Licenses /></DealerRoute>} />
             <Route path="reports" element={<Reports />} />

@@ -27,11 +27,18 @@ import {
   Alert,
   Card,
   InputAdornment,
+  Tooltip,
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import BarcodeScannerDialog from '../components/BarcodeScannerDialog';
+import { useUsbBarcodeScanner } from '../hooks/useUsbBarcodeScanner';
 import { Fragment } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -47,6 +54,8 @@ type PR = {
   lines: Array<{ quantity: number; reason?: string; item: { name: string; sku: string; price?: number } }>;
   approvedBy?: { fullName: string };
   rejectionReason?: string;
+  purpose?: string;
+  notes?: string;
   estimatedTotal: number;
 };
 
@@ -77,6 +86,9 @@ export default function PurchaseRequests() {
   
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [formLines, setFormLines] = useState([{ itemId: '', quantity: 1, reason: '' }]);
+  const [purpose, setPurpose] = useState('');
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [scanningBarcode, setScanningBarcode] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Table filters
@@ -124,10 +136,52 @@ export default function PurchaseRequests() {
     load(statusFilter, store);
   };
 
+  const handleBarcodeScan = async (barcode: string) => {
+    if (!modal) return;
+    if (!barcode.trim()) return;
+    setScanningBarcode(true);
+    try {
+      const response = await api.get(`/items/barcode/${encodeURIComponent(barcode.trim())}`);
+      const item = response.data;
+      if (item) {
+        // If this item already exists in formLines, increment quantity
+        const existingIdx = formLines.findIndex((l) => l.itemId === item.id);
+        if (existingIdx >= 0) {
+          setFormLines((prev) =>
+            prev.map((l, i) =>
+              i === existingIdx ? { ...l, quantity: l.quantity + 1 } : l
+            )
+          );
+        } else {
+          // If the last line is empty, replace it, otherwise append
+          setFormLines((prev) => {
+            const newLine = { itemId: item.id, quantity: 1, reason: '' };
+            const lastLine = prev[prev.length - 1];
+            if (lastLine && !lastLine.itemId) {
+              return [...prev.slice(0, -1), newLine];
+            }
+            return [...prev, newLine];
+          });
+        }
+      } else {
+        setCreateError(`Item with barcode "${barcode}" not found.`);
+        setTimeout(() => setCreateError(null), 3000);
+      }
+    } catch (err: any) {
+      setCreateError(err.response?.data?.message || `Item with barcode "${barcode}" not found.`);
+      setTimeout(() => setCreateError(null), 3000);
+    } finally {
+      setScanningBarcode(false);
+    }
+  };
+
+  useUsbBarcodeScanner(handleBarcodeScan);
+
   const openCreateModal = () => {
     // Default to user's assigned store
     setSelectedStoreId(user?.storeId || '');
     setFormLines([{ itemId: '', quantity: 1, reason: '' }]);
+    setPurpose('');
     setCreateError(null);
     setModal(true);
   };
@@ -135,7 +189,7 @@ export default function PurchaseRequests() {
   const submitRequest = async () => {
     const lines = formLines
       .filter((l) => l.itemId)
-      .map((l) => ({ itemId: l.itemId, quantity: Math.max(1, Number(l.quantity) || 1), reason: l.reason ?? '' }));
+      .map((l) => ({ itemId: l.itemId, quantity: Math.max(1, Number(l.quantity) || 1), reason: '' }));
     if (!lines.length) {
       setCreateError('Please add at least one item');
       return;
@@ -150,6 +204,9 @@ export default function PurchaseRequests() {
     try {
       await api.post<PR>('/purchase-requests', {
         storeId: selectedStoreId,
+        purpose,
+        notes: purpose,
+        status: 'pending',
         lines,
       });
       setModal(false);
@@ -389,6 +446,12 @@ export default function PurchaseRequests() {
                                 })}
                               </TableBody>
                             </Table>
+                            {(pr.purpose || pr.notes) && (
+                              <Box sx={{ mt: 2 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={700}>Purpose / Notes:</Typography>
+                                <Typography variant="body2" color="text.primary">{pr.purpose || pr.notes}</Typography>
+                              </Box>
+                            )}
                             {pr.rejectionReason && (
                               <Box sx={{ mt: 2 }}>
                                 <Typography variant="caption" color="error.main" fontWeight={700}>Rejection Reason:</Typography>
@@ -409,20 +472,26 @@ export default function PurchaseRequests() {
 
       {/* New Requisition Dialog */}
       <Dialog open={modal} onClose={() => { if (!submitting) { setModal(false); setCreateError(null); } }} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>New Purchase Requisition</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Create Purchase Requisition
+          <IconButton onClick={() => { if (!submitting) { setModal(false); setCreateError(null); } }} disabled={submitting}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
           {createError && <Alert severity="error" sx={{ mb: 2 }}>{createError}</Alert>}
           
           {/* Store Selection */}
-          <FormControl fullWidth margin="normal" sx={{ mb: 3 }}>
-            <InputLabel id="req-store-select">Target Store / Location</InputLabel>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Requesting Store *</Typography>
+          <FormControl fullWidth margin="none" sx={{ mb: 3 }}>
             <Select
-              labelId="req-store-select"
-              label="Target Store / Location"
               value={selectedStoreId}
               onChange={(e) => setSelectedStoreId(e.target.value)}
+              displayEmpty
               required
+              size="small"
             >
+              <MenuItem value="" disabled>Select Store...</MenuItem>
               {stores.map((s) => (
                 <MenuItem key={s.id} value={s.id} disabled={!s.isActive}>
                   {s.name}
@@ -431,54 +500,145 @@ export default function PurchaseRequests() {
             </Select>
           </FormControl>
 
-          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>Requested Items</Typography>
-          {formLines.map((line, idx) => (
-            <Box key={idx} sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-              <Select
+          {/* Purpose / Notes */}
+          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Purpose / Notes</Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            placeholder="Explain the purpose of this purchase requisition..."
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}
+            size="small"
+            sx={{ mb: 3 }}
+          />
+
+          {/* Requisition Items Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="subtitle2" fontWeight={700}>REQUISITION ITEMS *</Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
                 size="small"
-                value={line.itemId}
-                onChange={(e) => setFormLines((f) => f.map((l, i) => i === idx ? { ...l, itemId: e.target.value } : l))}
-                displayEmpty
-                sx={{ flex: 2 }}
+                variant="outlined"
+                startIcon={<QrCodeScannerIcon />}
+                onClick={() => setCameraOpen(true)}
+                sx={{ textTransform: 'none', borderRadius: 2, borderColor: 'divider', color: 'text.primary' }}
               >
-                <MenuItem value="">Select Product</MenuItem>
-                {items.map((i) => <MenuItem key={i.id} value={i.id}>{i.name} ({i.sku})</MenuItem>)}
-              </Select>
-              <TextField
-                type="number"
-                label="Qty"
+                Scan Item
+              </Button>
+              <Button
                 size="small"
-                value={line.quantity}
-                onChange={(e) => setFormLines((f) => f.map((l, i) => i === idx ? { ...l, quantity: Math.max(1, parseInt(e.target.value, 10) || 1) } : l))}
-                inputProps={{ min: 1 }}
-                sx={{ width: 90 }}
-              />
-              <TextField
-                label="Reason"
-                size="small"
-                placeholder="Reason / Purpose"
-                value={line.reason}
-                onChange={(e) => setFormLines((f) => f.map((l, i) => i === idx ? { ...l, reason: e.target.value } : l))}
-                sx={{ flex: 2 }}
-              />
-              <IconButton
-                color="error"
-                disabled={formLines.length === 1}
-                onClick={() => setFormLines(formLines.filter((_, i) => i !== idx))}
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => setFormLines((f) => [...f, { itemId: '', quantity: 1, reason: '' }])}
+                sx={{ textTransform: 'none', borderRadius: 2, borderColor: 'divider', color: 'text.primary' }}
               >
-                <InfoOutlinedIcon sx={{ transform: 'rotate(45deg)', color: 'error.main' }} />
-              </IconButton>
+                Add Line
+              </Button>
             </Box>
-          ))}
-          <Button onClick={() => setFormLines((f) => [...f, { itemId: '', quantity: 1, reason: '' }])}>+ Add Line Item</Button>
+          </Box>
+
+          {/* Items Table */}
+          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
+            <Table size="small">
+              <TableHead sx={{ bgcolor: 'action.hover' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 1.5 }}>PRODUCT</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600, color: 'text.secondary', py: 1.5 }}>QUANTITY</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', py: 1.5 }}>EST. UNIT COST (ETB)</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', py: 1.5 }}>EST. SUBTOTAL (ETB)</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600, color: 'text.secondary', py: 1.5 }}>ACTIONS</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {formLines.map((line, idx) => {
+                  const selectedItem = items.find((i) => i.id === line.itemId);
+                  const unitCost = selectedItem?.price ?? 0;
+                  const subtotal = unitCost * line.quantity;
+
+                  return (
+                    <TableRow key={idx}>
+                      <TableCell sx={{ py: 1, minWidth: 200 }}>
+                        <Select
+                          size="small"
+                          fullWidth
+                          value={line.itemId}
+                          onChange={(e) => setFormLines((f) => f.map((l, i) => i === idx ? { ...l, itemId: e.target.value } : l))}
+                          displayEmpty
+                        >
+                          <MenuItem value="" disabled>Select Product</MenuItem>
+                          {items.map((i) => (
+                            <MenuItem key={i.id} value={i.id}>
+                              {i.name} ({i.sku})
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
+                      <TableCell align="center" sx={{ py: 1 }}>
+                        <TextField
+                          type="number"
+                          size="small"
+                          value={line.quantity}
+                          onChange={(e) => setFormLines((f) => f.map((l, i) => i === idx ? { ...l, quantity: Math.max(1, parseInt(e.target.value, 10) || 1) } : l))}
+                          inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                          sx={{ width: 80 }}
+                        />
+                      </TableCell>
+                      <TableCell align="right" sx={{ py: 1, fontWeight: 500 }}>
+                        {unitCost.toFixed(2)}
+                      </TableCell>
+                      <TableCell align="right" sx={{ py: 1, fontWeight: 600 }}>
+                        ETB {subtotal.toFixed(2)}
+                      </TableCell>
+                      <TableCell align="center" sx={{ py: 1 }}>
+                        <IconButton
+                          color="error"
+                          disabled={formLines.length === 1}
+                          onClick={() => setFormLines(formLines.filter((_, i) => i !== idx))}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Grand Total */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
+            <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ mr: 1.5 }}>
+              ESTIMATED GRAND TOTAL:
+            </Typography>
+            <Typography variant="h6" fontWeight={700} color="primary.main">
+              ETB {formLines.reduce((sum, l) => {
+                const selectedItem = items.find((i) => i.id === l.itemId);
+                return sum + (selectedItem?.price ?? 0) * l.quantity;
+              }, 0).toFixed(2)}
+            </Typography>
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setModal(false)} disabled={submitting}>Cancel</Button>
-          <Button variant="contained" onClick={submitRequest} disabled={submitting}>
-            {submitting ? 'Creating...' : 'Create Draft Requisition'}
+        <DialogActions sx={{ p: 3, pt: 0, justifyContent: 'flex-end' }}>
+          <Button
+            variant="contained"
+            onClick={submitRequest}
+            disabled={submitting}
+            sx={{ px: 4, py: 1, borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+          >
+            {submitting ? 'Submitting...' : 'Submit Requisition'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      <BarcodeScannerDialog
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onScan={(text) => {
+          handleBarcodeScan(text);
+          setCameraOpen(false);
+        }}
+      />
     </Box>
   );
 }

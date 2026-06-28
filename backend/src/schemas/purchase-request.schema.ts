@@ -41,6 +41,12 @@ export class PurchaseRequestDocument extends Document {
   @Prop()
   rejectionReason: string;
 
+  @Prop()
+  purpose: string;
+
+  @Prop()
+  notes: string;
+
   @Prop({ type: [PurchaseRequestLineSchema], default: [] })
   lines: PurchaseRequestLineDoc[];
 

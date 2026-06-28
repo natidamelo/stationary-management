@@ -62,6 +62,8 @@ export class PurchaseRequestsService {
       approvedBy: approvedBy ? { fullName: approvedBy.fullName } : undefined,
       approvedAt: o.approvedAt,
       rejectionReason: o.rejectionReason,
+      purpose: o.purpose,
+      notes: o.notes,
       lines,
       estimatedTotal,
       createdAt: o.createdAt,
@@ -81,10 +83,12 @@ export class PurchaseRequestsService {
 
     const created = await this.model.create({
       requestNumber,
-      status: RequestStatus.DRAFT,
+      status: dto.status || RequestStatus.DRAFT,
       requestedById: toObjectId(user.id),
       storeId: toObjectId(storeIdVal) || undefined,
       tenantId: tid || cleanTenantId,
+      purpose: dto.purpose,
+      notes: dto.notes,
       lines: dto.lines.map((l) => ({
         itemId: toObjectId(l.itemId),
         quantity: Number(l.quantity) || 1,

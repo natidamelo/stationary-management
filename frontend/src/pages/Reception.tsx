@@ -109,11 +109,6 @@ export default function Reception() {
   const [barcodeInput, setBarcodeInput] = useState('');
   const [scanningBarcode, setScanningBarcode] = useState(false);
 
-  // Register USB Barcode Scanner hook for global scanning
-  useUsbBarcodeScanner(handleBarcodeScan, {
-    excludeIds: ['barcode-input-field'],
-  });
-
 
   const load = () => {
     api.get<Dashboard>('/reception/dashboard').then((r) => setDashboard(r.data)).catch(() => setLoading(false));
@@ -202,6 +197,11 @@ export default function Reception() {
       setScanningBarcode(false);
     }
   };
+
+  // Register USB Barcode Scanner hook for global scanning
+  useUsbBarcodeScanner(handleBarcodeScan, {
+    excludeIds: ['barcode-input-field'],
+  });
 
   const handleBarcodeInputChange = (value: string) => {
     setBarcodeInput(value);

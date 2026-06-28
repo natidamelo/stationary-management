@@ -129,7 +129,7 @@ export default function ItemIssues() {
     setSubmitting(true);
     setError('');
     try {
-      await api.post('/distribution', {
+      await api.post('/distribution/issue', {
         storeId,
         notes,
         lines,

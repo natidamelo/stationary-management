@@ -120,25 +120,33 @@ export default function StockManagement() {
   const [cameraOpen, setCameraOpen] = useState(false);
 
   const printBarcode = (item: StockItem, count: number = 1) => {
-    const barcode = item.barcode || item.sku;
-    const canvas = document.createElement('canvas');
+    const barcode = (item.barcode || item.sku || '').trim();
+    if (!barcode) {
+      alert('No barcode or SKU available for this item');
+      return;
+    }
     
     try {
-      JsBarcode(canvas, barcode, {
+      const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      JsBarcode(svgEl, barcode, {
         format: 'CODE128',
-        width: 3, 
-        height: 85, 
+        width: 2, 
+        height: 65, 
         displayValue: true,
         fontSize: 14,
         margin: 10,
+        background: '#ffffff',
+        lineColor: '#000000',
       });
+
+      const svgString = new XMLSerializer().serializeToString(svgEl);
 
       const labelHtml = `
         <div class="barcode-container">
-          <div style="font-weight: bold; margin-bottom: 5px; font-size: 10px;">${item.name}</div>
-          <div style="font-size: 9px; margin-bottom: 5px;">SKU: ${item.sku}</div>
-          <img src="${canvas.toDataURL()}" alt="Barcode" style="max-width: 100%; height: auto;" />
-          <div class="item-info">Barcode: ${barcode}</div>
+          <div style="font-weight: bold; margin-bottom: 3px; font-size: 10px; text-align: center;">${item.name}</div>
+          <div style="font-size: 9px; margin-bottom: 3px; text-align: center; color: #444;">SKU: ${item.sku}</div>
+          <div style="max-width: 95%; max-height: 25mm; display: flex; justify-content: center; margin: 0 auto;">${svgString}</div>
+          <div class="item-info" style="font-size: 8px; text-align: center; margin-top: 3px;">Barcode: ${barcode}</div>
         </div>`;
 
       const labelsHtml = Array(count).fill(labelHtml).join('');

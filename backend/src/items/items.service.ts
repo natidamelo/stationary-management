@@ -214,19 +214,28 @@ export class ItemsService {
     const tid = toObjectId(cleanTenantId);
     if (!tid && !cleanTenantId) throw new BadRequestException('Tenant ID is required');
 
-    // Try to find by barcode first, then fallback to SKU
+    const cleanBarcode = (barcode || '').trim();
+    if (!cleanBarcode) return null;
+
+    // Escaped regex pattern for case-insensitive exact match
+    const escapedBarcode = cleanBarcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const barcodeRegex = new RegExp(`^${escapedBarcode}$`, 'i');
+
+    const tenantFilter = tid 
+      ? { $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] }
+      : { tenantId: cleanTenantId };
+
+    // Try finding by barcode or SKU (exact match or case-insensitive)
     let doc = await this.model.findOne({ 
-      barcode, 
-      $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+      ...tenantFilter,
+      $or: [
+        { barcode: cleanBarcode }, 
+        { sku: cleanBarcode }, 
+        { barcode: barcodeRegex }, 
+        { sku: barcodeRegex }
+      ]
     }).populate('categoryId').lean();
 
-    if (!doc) {
-      // Fallback to SKU if barcode not found
-      doc = await this.model.findOne({ 
-        sku: barcode, 
-        $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] 
-      }).populate('categoryId').lean();
-    }
     return doc ? this.toItem(doc) : null;
   }
 

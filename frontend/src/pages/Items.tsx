@@ -184,7 +184,7 @@ export default function Items() {
     });
 
     try {
-      const response = await api.get<Item | null>(`/items/barcode/${barcode}`);
+      const response = await api.get<Item | null>(`/items/barcode/${encodeURIComponent(barcode.trim())}`);
       const foundItem = response.data;
 
       if (foundItem) {
@@ -377,23 +377,33 @@ export default function Items() {
   };
 
   const printBarcode = (item: Item, count: number = 20) => {
-    const barcode = item.barcode || item.sku;
-    const canvas = document.createElement('canvas');
+    const barcode = (item.barcode || item.sku || '').trim();
+    if (!barcode) {
+      alert('No barcode or SKU available for this item');
+      return;
+    }
+
     try {
-      JsBarcode(canvas, barcode, {
+      // Use SVG for crisp vector rendering at native printer DPI
+      const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      JsBarcode(svgEl, barcode, {
         format: 'CODE128',
-        width: 3,
-        height: 85,
+        width: 2,
+        height: 65,
         displayValue: true,
         fontSize: 14,
         margin: 10,
+        background: '#ffffff',
+        lineColor: '#000000',
       });
+
+      const svgString = new XMLSerializer().serializeToString(svgEl);
 
       const labelHtml = `
         <div class="label">
           <div class="item-name">${item.name}</div>
           <div class="item-sku">SKU: ${item.sku}</div>
-          <img class="barcode-img" src="${canvas.toDataURL()}" alt="Barcode" />
+          <div class="barcode-svg">${svgString}</div>
         </div>`;
 
       const labelsHtml = Array(count).fill(labelHtml).join('');
@@ -414,10 +424,11 @@ export default function Items() {
               * { box-sizing: border-box; }
               body { font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 4mm; }
               .grid { display: flex; flex-wrap: wrap; gap: 2mm; justify-content: flex-start; }
-              .label { width: 75mm; height: 40mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3mm; border: 0.5mm solid #000; page-break-inside: avoid; overflow: hidden; }
-              .item-name { font-size: 10pt; font-weight: bold; line-height: 1.2; max-width: 70mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 2mm; }
-              .item-sku { font-size: 8pt; color: #444; margin-bottom: 2mm; }
-              .barcode-img { max-width: 90%; height: auto; image-rendering: pixelated; }
+              .label { width: 75mm; height: 40mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3mm; border: 0.5mm solid #000; page-break-inside: avoid; overflow: hidden; background: #fff; }
+              .item-name { font-size: 10pt; font-weight: bold; line-height: 1.2; max-width: 70mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 1.5mm; text-align: center; }
+              .item-sku { font-size: 8pt; color: #333; margin-bottom: 1.5mm; text-align: center; }
+              .barcode-svg { max-width: 95%; max-height: 25mm; display: flex; justify-content: center; }
+              .barcode-svg svg { width: 100%; height: auto; display: block; }
             </style>
           </head>
           <body><div class="grid">${labelsHtml}</div><script>window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };</script></body>
@@ -425,6 +436,7 @@ export default function Items() {
       `);
       printWindow.document.close();
     } catch (e) {
+      console.error('Barcode print error:', e);
       alert('Error generating barcode.');
     }
   };

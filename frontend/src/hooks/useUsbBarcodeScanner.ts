@@ -34,12 +34,12 @@ export function useUsbBarcodeScanner(
       const timeDiff = currentTime - lastKeyTimeRef.current;
       lastKeyTimeRef.current = currentTime;
 
-      // USB barcode readers send characters extremely rapidly (usually < 35ms intervals).
-      // Humans typing very fast average 80ms+ per key. Let's use 50ms as a robust threshold.
-      const isFast = timeDiff <= 50;
+      // USB barcode readers send characters extremely rapidly (usually < 40ms intervals).
+      // Humans typing very fast average 100ms+ per key. Let's use 65ms as a robust threshold.
+      const isFast = timeDiff <= 65;
 
       if (e.key === 'Enter') {
-        const barcode = bufferRef.current.trim();
+        const barcode = bufferRef.current.trim().replace(/[\r\n]/g, '');
         
         if (barcode.length >= 3) {
           // If the Enter is part of the fast sequence, intercept and handle it

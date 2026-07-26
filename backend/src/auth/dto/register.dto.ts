@@ -20,7 +20,7 @@ export class RegisterDto {
   @IsString()
   department?: string;
 
-  @ApiPropertyOptional({ example: 'My Stationary Shop' })
+  @ApiPropertyOptional({ example: 'My Stationery Shop' })
   @IsOptional()
   @IsString()
   companyName?: string;

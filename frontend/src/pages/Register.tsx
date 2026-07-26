@@ -83,7 +83,7 @@ export default function Register() {
               Create Account
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Start your clean stationary system
+              Start your clean stationery system
             </Typography>
           </Box>
         </Box>

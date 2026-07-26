@@ -329,9 +329,6 @@ export default function Layout() {
               <h2 className="font-bold text-base tracking-tight text-foreground">
                 {pageTitle}
               </h2>
-              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider hidden sm:block">
-                {(settings.stationeryName || 'WOUBREX') + ' STOCK SYSTEM'}
-              </p>
             </div>
           </div>
 

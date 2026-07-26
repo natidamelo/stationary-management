@@ -342,7 +342,7 @@ export default function Invoices() {
                       </Box>
                     )}
                     <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.8, maxWidth: 250 }}>
-                      Official Invoice for stationary services and items provided.
+                      Official Invoice for stationery services and items provided.
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>

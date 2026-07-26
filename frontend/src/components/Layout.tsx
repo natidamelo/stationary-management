@@ -1,57 +1,4 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { typography } from '../theme/typography';
-import {
-  Box,
-  Drawer,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Typography,
-  Divider,
-  AppBar,
-  Toolbar,
-  Avatar,
-  IconButton,
-  Tooltip,
-  Chip,
-  Badge,
-  Popover,
-  useTheme,
-  Fab,
-  Fade,
-  FormControl,
-  Select,
-  MenuItem,
-  alpha,
-} from '@mui/material';
-import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
-import PointOfSaleRoundedIcon from '@mui/icons-material/PointOfSaleRounded';
-import InventoryRoundedIcon from '@mui/icons-material/InventoryRounded';
-import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded';
-import ShoppingCartRoundedIcon from '@mui/icons-material/ShoppingCartRounded';
-import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
-import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
-import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
-import VpnKeyRoundedIcon from '@mui/icons-material/VpnKeyRounded';
-import AssessmentRoundedIcon from '@mui/icons-material/AssessmentRounded';
-import NotificationsNoneRoundedIcon from '@mui/icons-material/NotificationsNoneRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
-import BusinessRoundedIcon from '@mui/icons-material/BusinessRounded';
-import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
-import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
-import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
-import LocalAtmRoundedIcon from '@mui/icons-material/LocalAtmRounded';
-import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded';
-import InboxRoundedIcon from '@mui/icons-material/InboxRounded';
-import CallMadeRoundedIcon from '@mui/icons-material/CallMadeRounded';
-import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
-import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded';
-import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
-import FiberManualRecordRoundedIcon from '@mui/icons-material/FiberManualRecordRounded';
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -59,8 +6,51 @@ import { useNotifications } from '../context/NotificationsContext';
 import SettingsDialog from './SettingsDialog';
 import GlobalSearch from './GlobalSearch';
 import { api } from '../api/client';
-
-const DRAWER_WIDTH = 268;
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  LayoutDashboard,
+  Tags,
+  Building2,
+  Truck,
+  Package,
+  Users,
+  ClipboardList,
+  ShoppingCart,
+  PackageCheck,
+  PackageMinus,
+  ArrowLeftRight,
+  Receipt,
+  MessageSquare,
+  BarChart3,
+  KeyRound,
+  Settings,
+  LogOut,
+  Menu,
+  Sun,
+  Moon,
+  Bell,
+  Sparkles,
+  ArrowUp,
+  X,
+} from 'lucide-react';
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
@@ -90,26 +80,33 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 function formatDate() {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
 export default function Layout() {
   const { user, logout, license } = useAuth();
-  const { settings } = useSettings();
+  const { settings, themeMode, toggleTheme } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
   const role = user?.role ?? '';
   const pathname = location.pathname;
-  const pageTitle = pathname === '/purchase-requests' && location.search.includes('pending') ? 'Approvals' : (PAGE_TITLES[pathname] ?? 'Dashboard');
+  const pageTitle =
+    pathname === '/purchase-requests' && location.search.includes('pending')
+      ? 'Approvals'
+      : PAGE_TITLES[pathname] ?? 'Dashboard';
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
   const [showScroll, setShowScroll] = useState(false);
   const [stores, setStores] = useState<any[]>([]);
 
-  const theme = useTheme();
-  const { themeMode, toggleTheme } = useSettings();
-  const { notifications, unreadCount, markRead, markAllRead, clearAll } = useNotifications();
+  const { notifications, unreadCount, markRead, markAllRead, clearAll } =
+    useNotifications();
 
   useEffect(() => {
     const handleScroll = () => setShowScroll(window.scrollY > 300);
@@ -119,8 +116,9 @@ export default function Layout() {
 
   useEffect(() => {
     if (user && user.role !== 'dealer') {
-      api.get('/stores')
-        .then((r) => { setStores(r.data); })
+      api
+        .get('/stores')
+        .then((r) => setStores(r.data))
         .catch((err) => console.error('Error fetching stores for select', err));
     }
   }, [user]);
@@ -139,718 +137,337 @@ export default function Layout() {
   };
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const masterRegistriesGroup = [
-    { to: '/categories', label: 'Categories', icon: <CategoryRoundedIcon fontSize="small" /> },
-    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/stores', label: 'Stores', icon: <BusinessRoundedIcon fontSize="small" /> }] : []),
-    { to: '/suppliers', label: 'Suppliers', icon: <LocalShippingRoundedIcon fontSize="small" /> },
-    { to: '/items', label: 'Products', icon: <InventoryRoundedIcon fontSize="small" /> },
-    { to: '/customers', label: 'Customers', icon: <GroupRoundedIcon fontSize="small" /> },
+    { to: '/categories', label: 'Categories', icon: <Tags className="h-4 w-4" /> },
+    ...(role === 'admin' || role === 'manager' || role === 'dealer'
+      ? [{ to: '/stores', label: 'Stores', icon: <Building2 className="h-4 w-4" /> }]
+      : []),
+    { to: '/suppliers', label: 'Suppliers', icon: <Truck className="h-4 w-4" /> },
+    { to: '/items', label: 'Products', icon: <Package className="h-4 w-4" /> },
+    { to: '/customers', label: 'Customers', icon: <Users className="h-4 w-4" /> },
   ];
 
   const transactionsGroup = [
-    { to: '/purchase-requests', label: 'Requisitions', icon: <AssignmentRoundedIcon fontSize="small" /> },
-    { to: '/purchase-orders', label: 'Orders', icon: <ShoppingCartRoundedIcon fontSize="small" /> },
-    { to: '/goods-receiving', label: 'Goods Receiving', icon: <InboxRoundedIcon fontSize="small" /> },
-    { to: '/item-issues', label: 'Item Issues', icon: <CallMadeRoundedIcon fontSize="small" /> },
-    { to: '/store-transfers', label: 'Store Transfers', icon: <SwapHorizRoundedIcon fontSize="small" /> },
-    ...(role === 'reception' || role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/reception', label: 'Sales', icon: <PointOfSaleRoundedIcon fontSize="small" /> }] : []),
+    { to: '/purchase-requests', label: 'Requisitions', icon: <ClipboardList className="h-4 w-4" /> },
+    { to: '/purchase-orders', label: 'Orders', icon: <ShoppingCart className="h-4 w-4" /> },
+    { to: '/goods-receiving', label: 'Goods Receiving', icon: <PackageCheck className="h-4 w-4" /> },
+    { to: '/item-issues', label: 'Item Issues', icon: <PackageMinus className="h-4 w-4" /> },
+    { to: '/store-transfers', label: 'Store Transfers', icon: <ArrowLeftRight className="h-4 w-4" /> },
+    ...(role === 'reception' || role === 'admin' || role === 'manager' || role === 'dealer'
+      ? [{ to: '/reception', label: 'Sales', icon: <Receipt className="h-4 w-4" /> }]
+      : []),
   ];
 
   const adminGroup = [
-    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/users', label: 'Users', icon: <PeopleRoundedIcon fontSize="small" /> }] : []),
-    { to: '/messages', label: 'Messages', icon: <ForumRoundedIcon fontSize="small" /> },
-    ...(role === 'admin' || role === 'manager' || role === 'dealer' ? [{ to: '/reports', label: 'Reports', icon: <AssessmentRoundedIcon fontSize="small" /> }] : []),
+    ...(role === 'admin' || role === 'manager' || role === 'dealer'
+      ? [{ to: '/users', label: 'Users', icon: <Users className="h-4 w-4" /> }]
+      : []),
+    { to: '/messages', label: 'Messages', icon: <MessageSquare className="h-4 w-4" /> },
+    ...(role === 'admin' || role === 'manager' || role === 'dealer'
+      ? [{ to: '/reports', label: 'Reports', icon: <BarChart3 className="h-4 w-4" /> }]
+      : []),
   ];
 
   const dealerGroup = [
-    ...(role === 'dealer' ? [
-      { to: '/registered-tenants', label: 'Registered Tenants', icon: <BusinessRoundedIcon fontSize="small" /> },
-      { to: '/licenses', label: 'Licenses', icon: <VpnKeyRoundedIcon fontSize="small" /> }
-    ] : []),
+    ...(role === 'dealer'
+      ? [
+          { to: '/registered-tenants', label: 'Registered Tenants', icon: <Building2 className="h-4 w-4" /> },
+          { to: '/licenses', label: 'Licenses', icon: <KeyRound className="h-4 w-4" /> },
+        ]
+      : []),
   ];
 
   const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, mt: 2.5, mb: 0.75 }}>
-      <Typography
-        sx={{
-          color: 'rgba(255,255,255,0.25)',
-          fontSize: '0.62rem',
-          fontWeight: 800,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-        }}
-      >
+    <div className="flex items-center gap-2 px-3 mt-5 mb-1.5">
+      <span className="text-[10px] font-extrabold tracking-widest text-muted-foreground/60 uppercase whitespace-nowrap">
         {children}
-      </Typography>
-      <Box sx={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
-    </Box>
+      </span>
+      <div className="flex-1 h-px bg-border/40" />
+    </div>
   );
 
   const renderLink = (link: { to: string; label: string; icon: React.ReactNode }) => (
-    <NavLink key={link.to + link.label} to={link.to} end={link.to === '/'} style={{ textDecoration: 'none', color: 'inherit' }}>
-      {({ isActive }) => (
-        <ListItemButton
-          selected={isActive}
-          sx={{
-            borderRadius: '12px',
-            mb: 0.25,
-            py: 0.85,
-            px: 1.5,
-            minHeight: 42,
-            mx: 0.75,
-            position: 'relative',
-            overflow: 'hidden',
-            transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-            ...(isActive ? {
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.15) 100%)',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                left: 0, top: '20%', bottom: '20%',
-                width: '3px',
-                background: 'linear-gradient(180deg, #818cf8, #c084fc)',
-                borderRadius: '0 3px 3px 0',
-                boxShadow: '0 0 8px rgba(129,140,248,0.6)',
-              },
-              '& .MuiListItemIcon-root': { color: '#818cf8' },
-              '& .MuiListItemText-primary': {
-                color: '#e0e7ff',
-                fontWeight: typography.fontWeightSemiBold,
-              },
-              '&:hover': {
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(139,92,246,0.2) 100%)',
-              },
-            } : {
-              '&:hover': {
-                background: 'rgba(255,255,255,0.05)',
-                '& .MuiListItemIcon-root': { color: '#94a3b8' },
-                '& .MuiListItemText-primary': { color: '#cbd5e1' },
-              },
-            }),
-          }}
-        >
-          <ListItemIcon sx={{ minWidth: 34, color: isActive ? '#818cf8' : '#475569', transition: 'color 0.2s ease' }}>
-            {link.icon}
-          </ListItemIcon>
-          <ListItemText
-            primary={link.label}
-            primaryTypographyProps={{
-              fontSize: '0.865rem',
-              fontWeight: isActive ? 600 : 500,
-              color: isActive ? '#e0e7ff' : '#64748b',
-              sx: { transition: 'color 0.15s ease' },
-            }}
-          />
-        </ListItemButton>
-      )}
+    <NavLink
+      key={link.to + link.label}
+      to={link.to}
+      end={link.to === '/'}
+      onClick={() => setMobileOpen(false)}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-3 py-2 mx-2 rounded-xl text-sm font-medium transition-all duration-150 relative ${
+          isActive
+            ? 'bg-primary/15 text-primary font-semibold border-l-2 border-primary shadow-sm'
+            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+        }`
+      }
+    >
+      {link.icon}
+      <span>{link.label}</span>
     </NavLink>
   );
 
-  const drawerContent = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'linear-gradient(180deg, #080c18 0%, #0d1224 100%)' }}>
-
-      {/* ── Brand / Logo ── */}
-      <Box sx={{ p: 2.5, pb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box
-          sx={{
-            width: 42,
-            height: 42,
-            borderRadius: '13px',
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            boxShadow: '0 4px 16px rgba(99,102,241,0.45)',
-            flexShrink: 0,
-            position: 'relative',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              inset: -1,
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.5), rgba(139,92,246,0.5))',
-              zIndex: -1,
-              filter: 'blur(6px)',
-            },
-          }}
-        >
-          <AutoAwesomeRoundedIcon sx={{ fontSize: '1.3rem' }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            noWrap
-            sx={{
-              fontWeight: 800,
-              fontSize: '0.95rem',
-              letterSpacing: '-0.01em',
-              lineHeight: 1.15,
-              background: 'linear-gradient(135deg, #818cf8 0%, #c084fc 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
+  const sidebarContent = (
+    <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+      {/* Brand Header */}
+      <div className="p-4 pb-3 flex items-center gap-3">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground shadow-md shadow-primary/20 shrink-0">
+          <Sparkles className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="font-extrabold text-sm leading-tight gradient-text truncate">
             {settings.stationeryName || 'WOUBREX PLC'}
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: '0.6rem',
-              fontWeight: 700,
-              letterSpacing: '0.1em',
-              color: 'rgba(255,255,255,0.28)',
-              textTransform: 'uppercase',
-            }}
-          >
-            STOCK MANAGEMENT
-          </Typography>
-        </Box>
-      </Box>
+          </h1>
+          <p className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+            Stock Management
+          </p>
+        </div>
+      </div>
 
-      {/* ── User Card ── */}
-      <Box
-        sx={{
-          mx: 1.5,
-          mb: 1,
-          p: 1.4,
-          borderRadius: '14px',
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 100%)',
-          border: '1px solid rgba(99,102,241,0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.25,
-          backdropFilter: 'blur(8px)',
-        }}
-      >
-        <Avatar
-          sx={{
-            width: 36,
-            height: 36,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            fontSize: '0.875rem',
-            fontWeight: 800,
-            boxShadow: '0 2px 10px rgba(99,102,241,0.35)',
-            flexShrink: 0,
-          }}
-        >
-          {(user?.fullName ?? 'U').charAt(0).toUpperCase()}
+      {/* User Card */}
+      <div className="mx-3 mb-2 p-2.5 rounded-xl bg-muted/40 border border-border/50 flex items-center gap-3">
+        <Avatar className="h-9 w-9">
+          <AvatarFallback className="text-xs">
+            {(user?.fullName ?? 'U').charAt(0).toUpperCase()}
+          </AvatarFallback>
         </Avatar>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            noWrap
-            sx={{ color: '#e2e8f0', fontSize: '0.845rem', fontWeight: 600, lineHeight: 1.3 }}
-          >
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold truncate leading-tight text-foreground">
             {user?.fullName}
-          </Typography>
-          <Chip
-            label={user?.role}
-            size="small"
-            sx={{
-              height: 18,
-              fontSize: '0.62rem',
-              fontWeight: 700,
-              textTransform: 'capitalize',
-              background: 'rgba(99,102,241,0.25)',
-              color: '#818cf8',
-              border: '1px solid rgba(99,102,241,0.35)',
-              '& .MuiChip-label': { px: 0.75 },
-            }}
-          />
-        </Box>
-        {/* Online indicator */}
-        <Box sx={{ ml: 'auto', flexShrink: 0 }}>
-          <FiberManualRecordRoundedIcon sx={{ fontSize: '0.65rem', color: '#34d399', filter: 'drop-shadow(0 0 4px #34d399)' }} />
-        </Box>
-      </Box>
+          </p>
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize mt-0.5 border-primary/30 text-primary">
+            {user?.role}
+          </Badge>
+        </div>
+        <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_6px_var(--color-success)]" />
+      </div>
 
-      {/* ── Navigation ── */}
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: 'auto',
-          py: 0.5,
-          '&::-webkit-scrollbar': { width: 3 },
-          '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.1)', borderRadius: 2 },
-          '&::-webkit-scrollbar-track': { background: 'transparent' },
-        }}
-      >
-        <List sx={{ py: 0 }}>
-          {/* Dashboard */}
-          {renderLink({ to: '/', label: 'Dashboard', icon: <DashboardRoundedIcon fontSize="small" /> })}
+      {/* Navigation Links */}
+      <nav className="flex-1 overflow-y-auto py-1 space-y-0.5">
+        {renderLink({ to: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> })}
 
-          <SectionLabel>Master Registries</SectionLabel>
-          {masterRegistriesGroup.map(renderLink)}
+        <SectionLabel>Master Registries</SectionLabel>
+        {masterRegistriesGroup.map(renderLink)}
 
-          <SectionLabel>Transactions & Sales</SectionLabel>
-          {transactionsGroup.map(renderLink)}
+        <SectionLabel>Transactions & Sales</SectionLabel>
+        {transactionsGroup.map(renderLink)}
 
-          <SectionLabel>Admin & Reports</SectionLabel>
-          {adminGroup.map(renderLink)}
+        <SectionLabel>Admin & Reports</SectionLabel>
+        {adminGroup.map(renderLink)}
 
-          {dealerGroup.length > 0 && (
-            <>
-              <SectionLabel>Dealer Actions</SectionLabel>
-              {dealerGroup.map(renderLink)}
-            </>
-          )}
+        {dealerGroup.length > 0 && (
+          <>
+            <SectionLabel>Dealer Actions</SectionLabel>
+            {dealerGroup.map(renderLink)}
+          </>
+        )}
 
-          {/* Settings */}
-          <Box sx={{ px: 0.75, mt: 1.5 }}>
-            <ListItemButton
-              onClick={() => setSettingsOpen(true)}
-              sx={{
-                borderRadius: '12px',
-                py: 0.85,
-                px: 1.5,
-                minHeight: 42,
-                transition: 'all 0.18s ease',
-                '&:hover': {
-                  background: 'rgba(255,255,255,0.05)',
-                  '& .MuiListItemIcon-root': { color: '#94a3b8' },
-                  '& .MuiListItemText-primary': { color: '#cbd5e1' },
-                },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 34, color: '#475569' }}>
-                <SettingsRoundedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Settings"
-                primaryTypographyProps={{ fontSize: '0.865rem', fontWeight: 500, color: '#64748b' }}
-              />
-            </ListItemButton>
-          </Box>
-        </List>
-      </Box>
+        <div className="px-2 pt-3">
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="flex w-full items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Settings</span>
+          </button>
+        </div>
+      </nav>
 
-      {/* ── Logout ── */}
-      <Box sx={{ p: 1.5, pt: 1, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <ListItemButton
+      {/* Footer / Logout */}
+      <div className="p-3 border-t border-sidebar-border">
+        <button
           onClick={handleLogout}
-          sx={{
-            borderRadius: '12px',
-            py: 0.85,
-            px: 1.5,
-            transition: 'all 0.18s ease',
-            '&:hover': {
-              background: 'rgba(248,113,113,0.1)',
-              '& .MuiListItemIcon-root': { color: '#f87171' },
-              '& .MuiListItemText-primary': { color: '#f87171' },
-            },
-          }}
+          className="flex w-full items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
         >
-          <ListItemIcon sx={{ minWidth: 34, color: '#475569' }}>
-            <LogoutRoundedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText
-            primary="Logout"
-            primaryTypographyProps={{ fontSize: '0.865rem', fontWeight: 500, color: '#64748b' }}
-          />
-        </ListItemButton>
-        <Box sx={{ textAlign: 'center', mt: 1 }}>
-          <Typography sx={{ color: 'rgba(255,255,255,0.18)', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.06em' }}>
-            v1.0.0 • Ready
-          </Typography>
-        </Box>
-      </Box>
-    </Box>
+          <LogOut className="h-4 w-4" />
+          <span>Logout</span>
+        </button>
+        <p className="text-[10px] text-center text-muted-foreground mt-2 font-medium">
+          v1.0.0 • Ready
+        </p>
+      </div>
+    </div>
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#080c18' }}>
-      {/* Mobile Drawer */}
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
-        onClose={handleDrawerToggle}
-        ModalProps={{ keepMounted: true }}
-        sx={{
-          display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': {
-            width: DRAWER_WIDTH,
-            boxSizing: 'border-box',
-            background: '#080c18',
-            borderRight: '1px solid rgba(255,255,255,0.06)',
-            overflow: 'hidden',
-          },
-        }}
-      >
-        {drawerContent}
-      </Drawer>
+    <div className="flex min-h-screen bg-background text-foreground">
+      {/* Mobile Sidebar Overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="relative z-10 w-64 max-w-[80vw] h-full shadow-2xl">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
 
-      {/* Permanent Drawer */}
-      <Drawer
-        variant="permanent"
-        sx={{
-          display: { xs: 'none', md: 'block' },
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: DRAWER_WIDTH,
-            boxSizing: 'border-box',
-            background: '#080c18',
-            borderRight: '1px solid rgba(255,255,255,0.06)',
-            overflow: 'hidden',
-          },
-        }}
-      >
-        {drawerContent}
-      </Drawer>
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:block w-64 shrink-0 fixed inset-y-0 z-30">
+        {sidebarContent}
+      </aside>
 
-      {/* Main Area */}
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', width: { md: `calc(100% - ${DRAWER_WIDTH}px)` } }}>
+      {/* Main Content Workspace */}
+      <div className="flex-1 flex flex-col min-h-screen md:pl-64">
+        {/* Top Navbar */}
+        <header className="sticky top-0 z-20 h-16 border-b border-border/60 bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <div>
+              <h2 className="font-bold text-base tracking-tight text-foreground">
+                {pageTitle}
+              </h2>
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider hidden sm:block">
+                {(settings.stationeryName || 'WOUBREX') + ' STOCK SYSTEM'}
+              </p>
+            </div>
+          </div>
 
-        {/* ── AppBar ── */}
-        <AppBar
-          position="sticky"
-          elevation={0}
-          sx={{
-            background: 'rgba(8,12,24,0.85)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            color: 'text.primary',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-            boxShadow: '0 1px 0 rgba(255,255,255,0.04), 0 4px 20px rgba(0,0,0,0.35)',
-          }}
-        >
-          <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 2, sm: 3 }, py: 1, minHeight: '62px !important' }}>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <GlobalSearch />
 
-            {/* Left side */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <IconButton
-                color="inherit"
-                aria-label="open drawer"
-                edge="start"
-                onClick={handleDrawerToggle}
-                sx={{
-                  display: { md: 'none' },
-                  color: '#94a3b8',
-                  '&:hover': { background: 'rgba(255,255,255,0.07)', color: '#e2e8f0' },
-                }}
-              >
-                <MenuRoundedIcon />
-              </IconButton>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ display: { xs: 'none', lg: 'flex' }, flexDirection: 'column' }}>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: '1rem',
-                      letterSpacing: '-0.01em',
-                      color: '#f1f5f9',
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {pageTitle}
-                  </Typography>
-                </Box>
-                <Divider
-                  orientation="vertical"
-                  flexItem
-                  sx={{ display: { xs: 'none', lg: 'block' }, borderColor: 'rgba(255,255,255,0.08)', mx: 0.5 }}
-                />
-                <Typography
-                  sx={{
-                    color: 'rgba(255,255,255,0.28)',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    fontSize: '0.62rem',
-                    textTransform: 'uppercase',
-                    display: { xs: 'none', md: 'block' },
-                  }}
-                >
-                  {`${settings.stationeryName || 'WOUBREX'} STOCK MANAGEMENT SYSTEM`.toUpperCase()}
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Right side */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1.25 } }}>
-              <GlobalSearch />
-              <Divider orientation="vertical" flexItem sx={{ mx: 0.25, borderColor: 'rgba(255,255,255,0.07)', display: { xs: 'none', md: 'block' } }} />
-
-              {/* Store Switcher */}
-              {stores.length > 0 && (
-                <FormControl size="small" sx={{ minWidth: 140, mr: 0.25 }}>
-                  <Select
-                    value={user?.storeId || ''}
-                    onChange={(e) => handleStoreChange(e.target.value as string)}
-                    displayEmpty
-                    sx={{
-                      borderRadius: '10px',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#e2e8f0',
-                      '& .MuiSelect-select': { py: '6px', px: 1.5, fontSize: '0.8rem', fontWeight: 600 },
-                      '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    }}
-                  >
-                    {stores.map((s) => (
-                      <MenuItem key={s.id} value={s.id} disabled={!s.isActive}>{s.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-
-              {/* License chip */}
-              {license?.expiryDate && (
-                <Chip
-                  size="small"
-                  label={`Licensed until ${new Date(license.expiryDate).toLocaleDateString()}`}
-                  sx={{
-                    background: 'rgba(52,211,153,0.12)',
-                    color: '#34d399',
-                    fontWeight: 700,
-                    fontSize: '0.65rem',
-                    height: 24,
-                    border: '1px solid rgba(52,211,153,0.25)',
-                    display: { xs: 'none', sm: 'flex' },
-                  }}
-                />
-              )}
-
-              {/* Date */}
-              <Typography
-                sx={{
-                  color: 'rgba(255,255,255,0.35)',
-                  display: { xs: 'none', md: 'block' },
-                  fontSize: '0.78rem',
-                  fontWeight: 500,
-                }}
-              >
-                {formatDate()}
-              </Typography>
-
-              <Divider orientation="vertical" flexItem sx={{ mx: 0.25, borderColor: 'rgba(255,255,255,0.07)', display: { xs: 'none', md: 'block' } }} />
-
-              {/* User avatar + info */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Avatar
-                  sx={{
-                    width: 34,
-                    height: 34,
-                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                    fontSize: '0.845rem',
-                    fontWeight: 800,
-                    boxShadow: '0 2px 10px rgba(99,102,241,0.4)',
-                  }}
-                >
-                  {(user?.fullName ?? 'U').charAt(0).toUpperCase()}
-                </Avatar>
-                <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-                  <Typography sx={{ fontWeight: 600, lineHeight: 1.3, fontSize: '0.845rem', color: '#e2e8f0' }}>
-                    {user?.fullName}
-                  </Typography>
-                  <Typography sx={{ textTransform: 'capitalize', fontSize: '0.7rem', color: '#64748b' }}>
-                    {user?.role}
-                  </Typography>
-                </Box>
-              </Box>
-
-              {/* Theme toggle */}
-              <Tooltip title={themeMode === 'light' ? 'Dark mode' : 'Light mode'}>
-                <IconButton
-                  size="small"
-                  onClick={toggleTheme}
-                  sx={{
-                    color: '#64748b',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '10px',
-                    width: 34,
-                    height: 34,
-                    transition: 'all 0.2s ease',
-                    '&:hover': { color: '#e2e8f0', background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)' },
-                  }}
-                >
-                  {themeMode === 'light' ? <DarkModeRoundedIcon fontSize="small" /> : <LightModeRoundedIcon fontSize="small" />}
-                </IconButton>
-              </Tooltip>
-
-              {/* Notifications */}
-              <Tooltip title="Notifications">
-                <IconButton
-                  size="small"
-                  onClick={(e) => setNotifAnchorEl(e.currentTarget)}
-                  sx={{
-                    color: '#64748b',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '10px',
-                    width: 34,
-                    height: 34,
-                    transition: 'all 0.2s ease',
-                    '&:hover': { color: '#e2e8f0', background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)' },
-                  }}
-                >
-                  <Badge badgeContent={unreadCount} color="error" overlap="circular">
-                    <NotificationsNoneRoundedIcon fontSize="small" />
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-
-              {/* Settings */}
-              <Tooltip title="Settings">
-                <IconButton
-                  size="small"
-                  onClick={() => setSettingsOpen(true)}
-                  sx={{
-                    color: '#64748b',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '10px',
-                    width: 34,
-                    height: 34,
-                    transition: 'all 0.2s ease',
-                    '&:hover': { color: '#e2e8f0', background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)' },
-                  }}
-                >
-                  <SettingsRoundedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Toolbar>
-        </AppBar>
-
-        {/* Page Content */}
-        <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, bgcolor: '#080c18' }}>
-          <Outlet />
-        </Box>
-      </Box>
-
-      {/* ── Notifications Popover ── */}
-      <Popover
-        open={Boolean(notifAnchorEl)}
-        anchorEl={notifAnchorEl}
-        onClose={() => setNotifAnchorEl(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{
-          sx: {
-            width: 340,
-            maxHeight: 480,
-            mt: 1.25,
-            borderRadius: '18px',
-            background: '#141d2e',
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.65)',
-            display: 'flex',
-            flexDirection: 'column',
-          },
-        }}
-      >
-        <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' }}>Notifications</Typography>
-            {unreadCount > 0 && (
-              <Chip
-                label={`${unreadCount} new`}
-                size="small"
-                sx={{
-                  height: 20,
-                  fontSize: '0.65rem',
-                  fontWeight: 700,
-                  background: 'rgba(99,102,241,0.2)',
-                  color: '#818cf8',
-                  border: '1px solid rgba(99,102,241,0.3)',
-                }}
-              />
+            {/* Store Switcher */}
+            {stores.length > 0 && (
+              <Select value={user?.storeId || ''} onValueChange={handleStoreChange}>
+                <SelectTrigger className="w-36 h-8 text-xs">
+                  <SelectValue placeholder="Select Store" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stores.map((s) => (
+                    <SelectItem key={s.id} value={s.id} disabled={!s.isActive}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
-          </Box>
-          {notifications.length > 0 && (
-            <Typography
-              sx={{ cursor: 'pointer', color: '#818cf8', fontWeight: 600, fontSize: '0.78rem', '&:hover': { color: '#c084fc' } }}
-              onClick={markAllRead}
-            >
-              Mark all read
-            </Typography>
-          )}
-        </Box>
-        <List sx={{ p: 0, flex: 1, overflowY: 'auto' }}>
-          {notifications.length === 0 ? (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
-              <Typography sx={{ color: '#475569', fontSize: '0.875rem' }}>No notifications</Typography>
-            </Box>
-          ) : (
-            notifications.map((n) => (
-              <ListItemButton
-                key={n._id}
-                onClick={() => {
-                  if (!n.isRead) markRead(n._id);
-                  if (n.link) navigate(n.link);
-                  setNotifAnchorEl(null);
-                }}
-                sx={{
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  bgcolor: n.isRead ? 'transparent' : 'rgba(99,102,241,0.07)',
-                  alignItems: 'flex-start',
-                  py: 1.5,
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
-                }}
-              >
-                <ListItemText
-                  primary={
-                    <Typography sx={{ fontWeight: n.isRead ? 500 : 700, color: '#e2e8f0', fontSize: '0.845rem', mb: 0.4 }}>
-                      {n.title}
-                    </Typography>
-                  }
-                  secondary={
-                    <>
-                      <Typography component="span" sx={{ display: 'block', color: '#64748b', fontSize: '0.78rem', lineHeight: 1.4, mb: 0.4 }}>
+
+            {/* License chip */}
+            {license?.expiryDate && (
+              <Badge variant="success" className="hidden sm:inline-flex text-[10px]">
+                Licensed: {new Date(license.expiryDate).toLocaleDateString()}
+              </Badge>
+            )}
+
+            {/* Date display */}
+            <span className="text-xs text-muted-foreground hidden lg:inline-block font-medium">
+              {formatDate()}
+            </span>
+
+            <Separator orientation="vertical" className="h-6 hidden sm:block" />
+
+            {/* Theme Toggle */}
+            <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9">
+              {themeMode === 'light' ? (
+                <Moon className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Sun className="h-4 w-4 text-warning" />
+              )}
+            </Button>
+
+            {/* Notifications Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <div className="flex items-center justify-between p-3 border-b border-border">
+                  <span className="font-semibold text-sm">Notifications</span>
+                  {unreadCount > 0 && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      {unreadCount} new
+                    </Badge>
+                  )}
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    No notifications
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <DropdownMenuItem
+                      key={n._id}
+                      onClick={() => {
+                        if (!n.isRead) markRead(n._id);
+                        if (n.link) navigate(n.link);
+                      }}
+                      className="flex flex-col items-start gap-1 p-3 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className={`text-xs font-bold ${!n.isRead ? 'text-primary' : ''}`}>
+                          {n.title}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">
                         {n.message}
-                      </Typography>
-                      <Typography component="span" sx={{ color: '#334155', fontSize: '0.7rem' }}>
-                        {new Date(n.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
-                      </Typography>
-                    </>
-                  }
-                />
-              </ListItemButton>
-            ))
-          )}
-        </List>
-        {notifications.length > 0 && (
-          <Box sx={{ p: 1.25, borderTop: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
-            <Typography
-              sx={{ cursor: 'pointer', color: '#f87171', fontSize: '0.78rem', fontWeight: 600, '&:hover': { color: '#fca5a5' } }}
-              onClick={clearAll}
+                      </p>
+                    </DropdownMenuItem>
+                  ))
+                )}
+                {notifications.length > 0 && (
+                  <div className="p-2 border-t border-border flex justify-between">
+                    <Button variant="ghost" size="sm" className="text-xs h-7" onClick={markAllRead}>
+                      Mark all read
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-xs h-7 text-destructive" onClick={clearAll}>
+                      Clear
+                    </Button>
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Settings Trigger */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              className="h-9 w-9"
             >
-              Clear all
-            </Typography>
-          </Box>
-        )}
-      </Popover>
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
+        </header>
 
-      {/* ── Scroll to top ── */}
-      <Fade in={showScroll}>
-        <Fab
-          size="small"
+        {/* Page Content Body */}
+        <main className="flex-1 p-4 sm:p-6 bg-background">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Scroll To Top Button */}
+      {showScroll && (
+        <Button
           onClick={scrollToTop}
-          sx={{
-            position: 'fixed',
-            bottom: 28,
-            right: 28,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            boxShadow: '0 8px 20px rgba(99,102,241,0.45)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #818cf8 0%, #a78bfa 100%)',
-              boxShadow: '0 12px 28px rgba(99,102,241,0.6)',
-              transform: 'translateY(-2px)',
-            },
-          }}
+          size="icon"
+          className="fixed bottom-6 right-6 rounded-full shadow-xl shadow-primary/30 z-40"
         >
-          <KeyboardArrowUpRoundedIcon />
-        </Fab>
-      </Fade>
+          <ArrowUp className="h-4 w-4" />
+        </Button>
+      )}
 
+      {/* Settings Dialog */}
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-    </Box>
+    </div>
   );
 }

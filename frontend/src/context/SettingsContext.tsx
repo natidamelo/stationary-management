@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 
 type Settings = {
   stationeryName: string;
@@ -24,20 +25,20 @@ const SettingsContext = createContext<SettingsContextType | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
-  const [themeMode, setThemeMode] = useState<ThemeMode>('light');
+  const { theme, setTheme } = useTheme();
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
 
   useEffect(() => {
-    // Load settings from localStorage on mount
     const saved = localStorage.getItem('appSettings');
     const savedTheme = localStorage.getItem('themeMode') as ThemeMode | null;
     if (savedTheme === 'dark' || savedTheme === 'light') {
       setThemeMode(savedTheme);
+      setTheme(savedTheme);
     }
     if (saved) {
       try {
         const parsed = JSON.parse(saved) as Settings;
         let logoUrl = parsed.logoUrl ?? null;
-        // If old value was pointing to /api/uploads (now deprecated), drop it
         if (logoUrl && logoUrl.startsWith('/api/uploads')) {
           logoUrl = null;
         }
@@ -46,7 +47,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         // Invalid JSON, use defaults
       }
     }
-  }, []);
+  }, [setTheme]);
 
   const updateSettings = (updates: Partial<Settings>) => {
     const newSettings = { ...settings, ...updates };
@@ -55,15 +56,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleTheme = () => {
-    setThemeMode((prev) => {
-      const next = prev === 'light' ? 'dark' : 'light';
-      localStorage.setItem('themeMode', next);
-      return next;
-    });
+    const next = (theme === 'dark' || themeMode === 'dark') ? 'light' : 'dark';
+    setThemeMode(next);
+    setTheme(next);
+    localStorage.setItem('themeMode', next);
   };
 
   const uploadLogo = async (file: File): Promise<string> => {
-    // Read file as data URL and store it directly in settings.
     const toDataUrl = (fileObj: File) =>
       new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -78,7 +77,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SettingsContext.Provider value={{ settings, themeMode, updateSettings, toggleTheme, uploadLogo }}>
+    <SettingsContext.Provider value={{ settings, themeMode: (theme as ThemeMode) || themeMode, updateSettings, toggleTheme, uploadLogo }}>
       {children}
     </SettingsContext.Provider>
   );

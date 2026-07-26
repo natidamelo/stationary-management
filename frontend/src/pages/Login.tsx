@@ -1,16 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { Box, Paper, Typography, TextField, Button, Alert, InputAdornment, IconButton, Link } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
-import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
-import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
-import LockRoundedIcon from '@mui/icons-material/LockRounded';
-import InventoryRoundedIcon from '@mui/icons-material/InventoryRounded';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { Collapse } from '@mui/material';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Package, Mail, Lock, Eye, EyeOff, Copy, ChevronDown, ChevronUp, AlertCircle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -18,237 +15,152 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [showComputerId, setShowComputerId] = useState(false);
   const [error, setError] = useState('');
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
   const { login, computerId } = useAuth();
+  const navigate = useNavigate();
 
   const copyComputerId = () => {
     navigator.clipboard.writeText(computerId);
+    toast.success('Computer ID copied to clipboard!');
   };
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoadingSubmit(true);
     try {
       await login(email, password);
+      toast.success('Signed in successfully');
       navigate('/');
-    } catch (err: unknown) {
-      const errObj = err as { response?: { status?: number; data?: { message?: string | string[]; error?: string } } };
-      if (!errObj.response) {
-        setError('Cannot reach server. Make sure the backend is running and try again.');
-        return;
-      }
-      const msg = errObj.response?.data?.message;
-      const text = Array.isArray(msg) ? msg.join(' ') : msg || errObj.response?.data?.error;
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+      const text = Array.isArray(msg) ? msg.join(' ') : msg || err.response?.data?.error;
       if (text) {
         setError(text);
-      } else if (errObj.response.status === 401) {
-        setError('Invalid email or password, account disabled, or license invalid for this computer. Check credentials and license.');
+      } else if (err.response?.status === 401) {
+        setError('Invalid credentials or license error.');
       } else {
-        setError('Login failed. Please try again.');
+        setError('Login failed. Please verify server connectivity.');
       }
+    } finally {
+      setLoadingSubmit(false);
     }
   };
 
   return (
-    <Box
-        sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99,102,241,0.3) 0%, transparent 60%), linear-gradient(180deg, #060a15 0%, #080c18 100%)',
-        p: 2,
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          width: '650px',
-          height: '650px',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 65%)',
-          top: '-220px',
-          right: '-200px',
-          borderRadius: '50%',
-        },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          width: '520px',
-          height: '520px',
-          background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 65%)',
-          bottom: '-150px',
-          left: '-150px',
-          borderRadius: '50%',
-        },
-      }}
-    >
-      <Paper
-        elevation={0}
-        sx={{
-          maxWidth: 420,
-          width: '100%',
-          p: 4,
-          borderRadius: '24px',
-          position: 'relative',
-          zIndex: 1,
-          background: 'linear-gradient(135deg, #111827 0%, #0d1224 100%)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          animation: 'fadeInUp 0.5s cubic-bezier(0.34,1.56,0.64,1)',
-          '@keyframes fadeInUp': {
-            from: { opacity: 0, transform: 'translateY(24px) scale(0.97)' },
-            to: { opacity: 1, transform: 'translateY(0) scale(1)' },
-          },
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Box
-            sx={{
-              width: 46,
-              height: 46,
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              boxShadow: '0 6px 18px rgba(99,102,241,0.45)',
-            }}
-          >
-            <InventoryRoundedIcon />
-          </Box>
-          <Box>
-            <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-              Stationery Management
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Sign in to your account
-            </Typography>
-          </Box>
-        </Box>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
+      {/* Background glow effects */}
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/20 rounded-full blur-3xl pointer-events-none" />
 
-        <form onSubmit={handleSubmit}>
-          <TextField
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            fullWidth
-            autoComplete="email"
-            margin="normal"
-            variant="outlined"
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EmailRoundedIcon sx={{ color: 'text.secondary', fontSize: '1.2rem' }} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          <TextField
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            fullWidth
-            autoComplete="current-password"
-            margin="normal"
-            variant="outlined"
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockRoundedIcon sx={{ color: 'text.secondary', fontSize: '1.2rem' }} />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
-                      {showPassword ? <VisibilityOffRoundedIcon fontSize="small" /> : <VisibilityRoundedIcon fontSize="small" />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          {error && (
-            <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            size="large"
-            sx={{
-              mt: 3,
-              py: 1.5,
-              fontSize: '0.95rem',
-              fontWeight: 700,
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              boxShadow: '0 6px 18px rgba(99,102,241,0.4)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #818cf8 0%, #a78bfa 100%)',
-                boxShadow: '0 8px 24px rgba(99,102,241,0.55)',
-                transform: 'translateY(-1px)',
-              },
-            }}
-          >
-            Sign in
-          </Button>
-        </form>
+      <Card className="w-full max-w-md shadow-2xl border-border/80 bg-card/90 backdrop-blur-xl relative z-10 animate-fade-in-scale">
+        <CardHeader className="space-y-3 text-center pb-4">
+          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/30">
+            <Package className="h-6 w-6" />
+          </div>
+          <div>
+            <CardTitle className="text-xl font-extrabold tracking-tight">Stationery Management</CardTitle>
+            <CardDescription className="text-xs mt-1">Sign in to manage stock and sales</CardDescription>
+          </div>
+        </CardHeader>
 
-         <Box sx={{ mt: 3, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@company.com"
+                  className="pl-9"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  className="pl-9 pr-9"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/15 text-destructive text-xs font-medium border border-destructive/30">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <Button type="submit" className="w-full h-10 font-bold" disabled={loadingSubmit}>
+              {loadingSubmit ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center text-xs text-muted-foreground">
             Don't have an account?{' '}
-            <Link component={RouterLink} to="/register" sx={{ fontWeight: 600, color: '#818cf8', textDecoration: 'none', '&:hover': { color: '#c084fc' } }}>
-              Create one here
-            </Link>
-          </Typography>
-        </Box>
+            <RouterLink to="/register" className="font-semibold text-primary hover:underline">
+              Register here
+            </RouterLink>
+          </div>
 
-         <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Button
-            size="small"
-            onClick={() => setShowComputerId(!showComputerId)}
-            endIcon={showComputerId ? <KeyboardArrowUpIcon /> : <ExpandMoreIcon />}
-            sx={{
-              color: 'text.secondary',
-              textTransform: 'none',
-              fontWeight: 500,
-              '&:hover': { bgcolor: 'transparent', color: 'primary.main' }
-            }}
-          >
-            {showComputerId ? 'Hide' : 'Show'} Computer ID
-          </Button>
-        </Box>
-        <Collapse in={showComputerId}>
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <Typography variant="caption" color="text.secondary" display="block" fontWeight={600} sx={{ mb: 0.5 }}>
-              Computer ID (for license activation)
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" fontFamily="'JetBrains Mono', monospace" sx={{ wordBreak: 'break-all', fontSize: '0.8rem', color: 'text.primary', flex: 1 }}>
-                {computerId}
-              </Typography>
-              <Button
-                size="small"
-                startIcon={<ContentCopyIcon sx={{ fontSize: '0.9rem !important' }} />}
-                onClick={copyComputerId}
-                sx={{ minWidth: 0, px: 1.5, borderRadius: '10px', fontSize: '0.75rem', color: '#818cf8', bgcolor: 'rgba(99,102,241,0.15)', '&:hover': { bgcolor: 'rgba(99,102,241,0.25)' } }}
-              >
-                Copy
-              </Button>
-            </Box>
-          </Box>
-        </Collapse>
-      </Paper>
-    </Box>
+          {/* Computer ID Section */}
+          <div className="mt-4 pt-4 border-t border-border/50 text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setShowComputerId(!showComputerId)}
+            >
+              {showComputerId ? 'Hide Computer ID' : 'Show Computer ID'}
+              {showComputerId ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
+            </Button>
+
+            {showComputerId && (
+              <div className="mt-3 p-3 rounded-lg bg-muted/50 border border-border text-left space-y-2 animate-fade-in">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Computer Hardware ID
+                </span>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs font-mono text-foreground break-all flex-1">
+                    {computerId}
+                  </code>
+                  <Button variant="outline" size="icon-sm" onClick={copyComputerId}>
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

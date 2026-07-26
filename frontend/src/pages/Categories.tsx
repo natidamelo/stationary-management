@@ -28,7 +28,7 @@ import { useAuth } from '../context/AuthContext';
 
 type Category = { id: string; name: string; description?: string };
 
-const canEdit = (role: string) => ['admin', 'manager', 'inventory_clerk'].includes(role);
+const canEdit = (role: string) => ['admin', 'dealer', 'manager', 'inventory_clerk'].includes(role);
 
 export default function Categories() {
   const { user } = useAuth();

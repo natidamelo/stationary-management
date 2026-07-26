@@ -69,7 +69,7 @@ type Item = {
 type Store = { id: string; name: string; location: string };
 type Supplier = { id: string; name: string };
 
-const canEdit = (role: string) => ['admin', 'manager', 'inventory_clerk'].includes(role);
+const canEdit = (role: string) => ['admin', 'dealer', 'manager', 'inventory_clerk'].includes(role);
 
 export default function Items() {
   const { user } = useAuth();

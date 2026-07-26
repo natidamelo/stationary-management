@@ -30,7 +30,7 @@ import { useAuth } from '../context/AuthContext';
 
 type Supplier = { id: string; name: string; contactPerson?: string; email?: string; phone?: string; address?: string; isActive: boolean };
 
-const canEdit = (role: string) => ['admin', 'manager', 'inventory_clerk'].includes(role);
+const canEdit = (role: string) => ['admin', 'dealer', 'manager', 'inventory_clerk'].includes(role);
 
 export default function Suppliers() {
   const { user } = useAuth();

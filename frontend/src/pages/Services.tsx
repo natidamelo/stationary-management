@@ -30,7 +30,7 @@ type Service = {
   isActive: boolean;
 };
 
-const canEdit = (role: string) => ['admin', 'manager'].includes(role);
+const canEdit = (role: string) => ['admin', 'dealer', 'manager'].includes(role);
 
 export default function Services() {
   const { user } = useAuth();

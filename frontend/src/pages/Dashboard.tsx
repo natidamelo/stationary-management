@@ -22,9 +22,7 @@ import {
   ToggleButton,
 } from '@mui/material';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
-import FlagRoundedIcon from '@mui/icons-material/FlagRounded';
 import AttachMoneyRoundedIcon from '@mui/icons-material/AttachMoneyRounded';
 import DoneAllRoundedIcon from '@mui/icons-material/DoneAllRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
@@ -33,7 +31,9 @@ import InventoryRoundedIcon from '@mui/icons-material/InventoryRounded';
 import AssessmentRoundedIcon from '@mui/icons-material/AssessmentRounded';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
+import FlagRoundedIcon from '@mui/icons-material/FlagRounded';
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded';
+import ElectricBoltRoundedIcon from '@mui/icons-material/ElectricBoltRounded';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -52,6 +52,33 @@ type SalesChartPoint = { label: string; revenue: number; date: string };
 type SalesChartPeriod = 'day' | 'week' | 'month' | 'year';
 
 const isAdminOrManager = (role: string) => role === 'admin' || role === 'manager';
+
+// Custom tooltip for chart
+const CustomChartTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <Box
+        sx={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+          border: '1px solid rgba(99,102,241,0.3)',
+          borderRadius: '12px',
+          p: 1.5,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+        }}
+      >
+        <Typography sx={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', mb: 0.5 }}>
+          {label}
+        </Typography>
+        <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: '#818cf8' }}>
+          {typeof payload[0].value === 'number'
+            ? payload[0].value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+            : payload[0].value}
+        </Typography>
+      </Box>
+    );
+  }
+  return null;
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -79,16 +106,25 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 12 }}>
         <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress size={40} thickness={4} sx={{ color: '#4f46e5' }} />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>Loading dashboard...</Typography>
+          <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
+            <CircularProgress size={48} thickness={3} sx={{ color: '#6366f1' }} />
+            <Box sx={{
+              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <ElectricBoltRoundedIcon sx={{ fontSize: '1.2rem', color: '#818cf8' }} />
+            </Box>
+          </Box>
+          <Typography sx={{ color: '#475569', fontSize: '0.875rem', fontWeight: 500 }}>
+            Loading dashboard...
+          </Typography>
         </Box>
       </Box>
     );
   }
   if (!summary) {
-    return <Typography color="text.secondary">Failed to load dashboard.</Typography>;
+    return <Typography sx={{ color: '#64748b' }}>Failed to load dashboard.</Typography>;
   }
 
   const firstName = (user?.fullName ?? 'User').split(' ')[0];
@@ -99,162 +135,237 @@ export default function Dashboard() {
       label: 'Pending Approvals',
       value: summary.pendingApprovals,
       sub: 'Awaiting approval',
-      icon: <CheckCircleOutlineRoundedIcon />,
-      gradient: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-      lightBg: '#eef2ff',
-      lightColor: '#4f46e5',
+      icon: <CheckCircleOutlineRoundedIcon sx={{ fontSize: '1.4rem' }} />,
+      gradient: 'linear-gradient(135deg, #4f46e5 0%, #818cf8 100%)',
+      glowColor: 'rgba(99,102,241,0.4)',
+      iconBg: 'rgba(99,102,241,0.2)',
+      iconColor: '#818cf8',
+      borderColor: 'rgba(99,102,241,0.25)',
     },
     {
       label: 'Completed',
       value: summary.todayCompletedSales ?? 0,
       sub: 'Sales today',
-      icon: <DoneAllRoundedIcon />,
-      gradient: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-      lightBg: '#ecfdf5',
-      lightColor: '#059669',
+      icon: <DoneAllRoundedIcon sx={{ fontSize: '1.4rem' }} />,
+      gradient: 'linear-gradient(135deg, #059669 0%, #34d399 100%)',
+      glowColor: 'rgba(52,211,153,0.35)',
+      iconBg: 'rgba(52,211,153,0.15)',
+      iconColor: '#34d399',
+      borderColor: 'rgba(52,211,153,0.25)',
     },
     {
       label: 'Low Stock Items',
       value: summary.lowStockCount,
       sub: 'Need reorder',
-      icon: <WarningAmberRoundedIcon />,
-      gradient: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
-      lightBg: '#fffbeb',
-      lightColor: '#d97706',
+      icon: <WarningAmberRoundedIcon sx={{ fontSize: '1.4rem' }} />,
+      gradient: 'linear-gradient(135deg, #d97706 0%, #fbbf24 100%)',
+      glowColor: 'rgba(251,191,36,0.35)',
+      iconBg: 'rgba(251,191,36,0.15)',
+      iconColor: '#fbbf24',
+      borderColor: 'rgba(251,191,36,0.25)',
     },
     {
       label: 'Revenue',
       value: `$${(summary.todayRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       sub: 'Today',
-      icon: <AttachMoneyRoundedIcon />,
-      gradient: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)',
-      lightBg: '#f5f3ff',
-      lightColor: '#7c3aed',
+      icon: <AttachMoneyRoundedIcon sx={{ fontSize: '1.4rem' }} />,
+      gradient: 'linear-gradient(135deg, #7c3aed 0%, #c084fc 100%)',
+      glowColor: 'rgba(192,132,252,0.35)',
+      iconBg: 'rgba(139,92,246,0.15)',
+      iconColor: '#c084fc',
+      borderColor: 'rgba(139,92,246,0.25)',
     },
   ];
 
   const quickActions = [
-    { label: 'Add New Item', path: '/items', icon: <AddRoundedIcon />, color: '#4f46e5', bg: '#eef2ff' },
-    { label: 'Manage Categories', path: '/categories', icon: <CategoryRoundedIcon />, color: '#059669', bg: '#ecfdf5' },
-    { label: 'Check Inventory', path: '/inventory', icon: <InventoryRoundedIcon />, color: '#d97706', bg: '#fffbeb' },
-    ...(isAdminOrManager(role) ? [{ label: 'View Reports', path: '/reports', icon: <AssessmentRoundedIcon />, color: '#7c3aed', bg: '#f5f3ff' }] : []),
+    { label: 'Add New Item', path: '/items', icon: <AddRoundedIcon />, gradient: 'linear-gradient(135deg, #4f46e5 0%, #818cf8 100%)', glow: 'rgba(99,102,241,0.35)' },
+    { label: 'Categories', path: '/categories', icon: <CategoryRoundedIcon />, gradient: 'linear-gradient(135deg, #059669 0%, #34d399 100%)', glow: 'rgba(52,211,153,0.35)' },
+    { label: 'Inventory', path: '/inventory', icon: <InventoryRoundedIcon />, gradient: 'linear-gradient(135deg, #d97706 0%, #fbbf24 100%)', glow: 'rgba(251,191,36,0.35)' },
+    ...(isAdminOrManager(role) ? [{ label: 'View Reports', path: '/reports', icon: <AssessmentRoundedIcon />, gradient: 'linear-gradient(135deg, #7c3aed 0%, #c084fc 100%)', glow: 'rgba(192,132,252,0.35)' }] : []),
   ];
 
   const activityItems = [
-    summary.pendingApprovals > 0 && { text: `${summary.pendingApprovals} pending approval(s) need attention`, dot: '#4f46e5', time: '1 day ago' },
-    summary.draftPurchaseOrders > 0 && { text: `${summary.draftPurchaseOrders} draft purchase order(s)`, dot: '#d97706', time: 'Today' },
-    summary.lowStockCount > 0 && { text: `${summary.lowStockCount} low stock item(s) — reorder soon`, dot: '#dc2626', time: 'Today' },
-  ].filter(Boolean) as { text: string; dot: string; time: string }[];
+    summary.pendingApprovals > 0 && { text: `${summary.pendingApprovals} pending approval(s) need attention`, dot: '#818cf8', dotGlow: 'rgba(129,140,248,0.4)', time: '1 day ago' },
+    summary.draftPurchaseOrders > 0 && { text: `${summary.draftPurchaseOrders} draft purchase order(s)`, dot: '#fbbf24', dotGlow: 'rgba(251,191,36,0.4)', time: 'Today' },
+    summary.lowStockCount > 0 && { text: `${summary.lowStockCount} low stock item(s) — reorder soon`, dot: '#f87171', dotGlow: 'rgba(248,113,113,0.4)', time: 'Today' },
+  ].filter(Boolean) as { text: string; dot: string; dotGlow: string; time: string }[];
 
-  if (activityItems.length === 0) activityItems.push({ text: 'All systems up to date', dot: '#059669', time: 'Today' });
+  if (activityItems.length === 0) {
+    activityItems.push({ text: 'All systems up to date', dot: '#34d399', dotGlow: 'rgba(52,211,153,0.4)', time: 'Today' });
+  }
 
   return (
-    <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
-      {/* Header */}
-      <Box sx={{ mb: 3.5 }}>
-        <Typography variant="h5" fontWeight={typography.fontWeightBold} sx={{ color: 'text.primary', letterSpacing: typography.pageTitle.letterSpacing, mb: 0.5 }}>
-          Welcome back, {firstName}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ fontSize: typography.body.fontSize }}>
+    <Box sx={{ animation: 'fadeIn 0.35s ease-out' }}>
+
+      {/* ── Welcome Header ── */}
+      <Box
+        sx={{
+          mb: 4,
+          p: 3,
+          borderRadius: '20px',
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.06) 50%, rgba(8,12,24,0) 100%)',
+          border: '1px solid rgba(99,102,241,0.15)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: -40,
+            right: -40,
+            width: 200,
+            height: 200,
+            background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 65%)',
+            borderRadius: '50%',
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+          <ElectricBoltRoundedIcon sx={{ color: '#fbbf24', fontSize: '1.3rem', filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.6))' }} />
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: '1.5rem',
+              letterSpacing: '-0.025em',
+              background: 'linear-gradient(135deg, #f1f5f9 0%, #818cf8 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            Welcome back, {firstName}
+          </Typography>
+        </Box>
+        <Typography sx={{ color: '#475569', fontSize: '0.875rem', fontWeight: 500, position: 'relative' }}>
           Here&apos;s what&apos;s happening at your stationery today.
         </Typography>
       </Box>
 
-      {/* KPI Cards */}
-      <Grid container spacing={2} sx={{ mb: 3.5 }}>
-        {kpiCards.map((kpi) => (
+      {/* ── KPI Cards ── */}
+      <Grid container spacing={2.5} sx={{ mb: 4 }}>
+        {kpiCards.map((kpi, idx) => (
           <Grid size={{ xs: 6, sm: 3 }} key={kpi.label} sx={{ display: 'flex' }}>
-            <Card
+            <Box
               sx={{
                 width: '100%',
-                border: 'none',
-                background: '#fff',
-                position: 'relative',
-                overflow: 'hidden',
-                cursor: 'default',
-                transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+                borderRadius: '20px',
+                p: '1px',
+                background: kpi.gradient,
+                boxShadow: `0 8px 32px ${kpi.glowColor}`,
+                transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+                animation: `fadeInUp 0.4s ease-out ${idx * 0.08}s both`,
                 '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                  transform: 'translateY(-5px) scale(1.01)',
+                  boxShadow: `0 16px 40px ${kpi.glowColor}`,
                 },
               }}
             >
-              <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: kpi.gradient }} />
-              <CardContent sx={{ p: 2.5, pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '19px',
+                  background: 'linear-gradient(135deg, #111827 0%, #0d1224 100%)',
+                  p: 2.5,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                }}
+              >
                 <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typography.fontWeightSemiBold, fontSize: typography.fontSizeXs, letterSpacing: typography.label.letterSpacing, textTransform: 'uppercase' }}>
+                  <Typography
+                    sx={{
+                      fontSize: '0.62rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: '#475569',
+                      mb: 1,
+                    }}
+                  >
                     {kpi.label}
                   </Typography>
-                  <Typography variant="h4" fontWeight={typography.fontWeightExtraBold} sx={{ mt: 0.75, mb: 0.25, fontSize: typography.display.fontSize, letterSpacing: typography.display.letterSpacing, color: 'text.primary' }}>
+                  <Typography
+                    sx={{
+                      fontSize: '2rem',
+                      fontWeight: 900,
+                      letterSpacing: '-0.035em',
+                      color: '#f1f5f9',
+                      lineHeight: 1,
+                      mb: 0.75,
+                    }}
+                  >
                     {kpi.value}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typography.fontWeightMedium, fontSize: typography.caption.fontSize }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>
                     {kpi.sub}
                   </Typography>
                 </Box>
                 <Box
                   sx={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 2.5,
-                    bgcolor: kpi.lightBg,
+                    width: 46,
+                    height: 46,
+                    borderRadius: '14px',
+                    background: kpi.iconBg,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: kpi.lightColor,
+                    color: kpi.iconColor,
                     flexShrink: 0,
+                    border: `1px solid ${kpi.borderColor}`,
+                    boxShadow: `0 4px 12px ${kpi.glowColor}`,
                   }}
                 >
                   {kpi.icon}
                 </Box>
-              </CardContent>
-            </Card>
+              </Box>
+            </Box>
           </Grid>
         ))}
       </Grid>
 
-      {/* Sales Graph */}
+      {/* ── Sales Chart ── */}
       <Card
         sx={{
-          mb: 3.5,
-          border: 'none',
-          background: 'linear-gradient(180deg, #ffffff 0%, #fafbff 100%)',
-          boxShadow: '0 4px 24px rgba(79, 70, 229, 0.06)',
+          mb: 4,
+          background: 'linear-gradient(135deg, #111827 0%, #0d1224 100%)',
+          border: '1px solid rgba(99,102,241,0.15)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
           overflow: 'hidden',
           position: 'relative',
+          animation: 'fadeInUp 0.4s ease-out 0.2s both',
           '&::before': {
             content: '""',
             position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 4,
-            background: 'linear-gradient(90deg, #4f46e5 0%, #6366f1 50%, #8b5cf6 100%)',
+            top: 0, left: 0, right: 0,
+            height: '3px',
+            background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #c084fc 100%)',
+            boxShadow: '0 0 12px rgba(99,102,241,0.6)',
           },
         }}
       >
-        <CardContent sx={{ p: 2.5, pt: 3 }}>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Box
                 sx={{
                   width: 44,
                   height: 44,
-                  borderRadius: 2.5,
-                  background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+                  borderRadius: '13px',
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.15) 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#4f46e5',
+                  color: '#818cf8',
+                  border: '1px solid rgba(99,102,241,0.25)',
                 }}
               >
-                <BarChartRoundedIcon sx={{ fontSize: '1.5rem' }} />
+                <BarChartRoundedIcon sx={{ fontSize: '1.4rem' }} />
               </Box>
               <Box>
-                <Typography variant="subtitle1" fontWeight={typography.fontWeightBold} sx={{ fontSize: typography.sectionHeader.fontSize, color: 'text.primary', letterSpacing: typography.sectionHeader.letterSpacing }}>
-                  Sales overview
+                <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', color: '#f1f5f9', letterSpacing: '-0.01em' }}>
+                  Sales Overview
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: typography.caption.fontSize }}>
+                <Typography sx={{ fontSize: '0.78rem', color: '#475569', fontWeight: 500 }}>
                   Revenue by period
                 </Typography>
               </Box>
@@ -264,22 +375,6 @@ export default function Dashboard() {
               exclusive
               onChange={(_, v) => v != null && setSalesChartPeriod(v)}
               size="small"
-              sx={{
-                '& .MuiToggleButtonGroup-grouped': {
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  fontWeight: typography.fontWeightSemiBold,
-                  fontSize: typography.fontSizeXs,
-                  px: 1.5,
-                  '&.Mui-selected': {
-                    background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-                    color: '#fff',
-                    borderColor: 'transparent',
-                    '&:hover': { background: 'linear-gradient(135deg, #4338ca 0%, #4f46e5 100%)' },
-                  },
-                },
-              }}
             >
               <ToggleButton value="day">Day</ToggleButton>
               <ToggleButton value="week">Week</ToggleButton>
@@ -287,206 +382,300 @@ export default function Dashboard() {
               <ToggleButton value="year">Year</ToggleButton>
             </ToggleButtonGroup>
           </Box>
+
           <Box sx={{ width: '100%', minWidth: 0 }}>
             {salesChartLoading ? (
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 280 }}>
-                <CircularProgress size={36} thickness={4} sx={{ color: '#4f46e5' }} />
+                <CircularProgress size={36} thickness={3} sx={{ color: '#6366f1' }} />
               </Box>
             ) : salesChartData.length === 0 ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 280, color: 'text.secondary' }}>
-                <Typography variant="body2">No sales data for this period.</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 280, gap: 1 }}>
+                <BarChartRoundedIcon sx={{ fontSize: '2.5rem', color: 'rgba(255,255,255,0.1)' }} />
+                <Typography sx={{ color: '#334155', fontSize: '0.875rem' }}>No sales data for this period</Typography>
               </Box>
             ) : (
               <ResponsiveContainer width="100%" height={280} minHeight={1}>
                 <AreaChart data={salesChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
+                      <stop offset="0%" stopColor="#818cf8" stopOpacity={0.4} />
+                      <stop offset="60%" stopColor="#6366f1" stopOpacity={0.1} />
                       <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
                     </linearGradient>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                      <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 11, fill: '#6b7280', fontWeight: 500 }}
-                    axisLine={{ stroke: '#e5e7eb' }}
+                    tick={{ fontSize: 11, fill: '#334155', fontWeight: 500 }}
+                    axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 11, fill: '#6b7280', fontWeight: 500 }}
+                    tick={{ fontSize: 11, fill: '#334155', fontWeight: 500 }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v))}
                   />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: 12,
-                      border: '1px solid #e5e7eb',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      fontWeight: 600,
-                    }}
-                    formatter={(value: number) => [typeof value === 'number' ? value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : value, 'Revenue']}
-                    labelStyle={{ fontWeight: 700, color: '#374151' }}
-                  />
+                  <Tooltip content={<CustomChartTooltip />} />
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#6366f1"
-                    strokeWidth={2.5}
+                    stroke="#818cf8"
+                    strokeWidth={3}
                     fill="url(#salesGradient)"
+                    dot={{ fill: '#6366f1', strokeWidth: 2, r: 4, stroke: '#818cf8' }}
+                    activeDot={{ r: 6, fill: '#c084fc', stroke: '#818cf8', strokeWidth: 2, filter: 'url(#glow)' }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             )}
           </Box>
+
           {!salesChartLoading && salesChartData.length > 0 && (
-            <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: typography.fontWeightMedium }}>
-                Total revenue: <Box component="strong" sx={{ color: 'text.primary' }}>
-                  {salesChartData.reduce((s, d) => s + d.revenue, 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </Box>
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {salesChartData.length} {salesChartPeriod === 'day' ? 'days' : salesChartPeriod === 'week' ? 'weeks' : salesChartPeriod === 'month' ? 'months' : 'years'}
+            <Box
+              sx={{
+                mt: 2,
+                pt: 2,
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 1,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TrendingUpRoundedIcon sx={{ fontSize: '1rem', color: '#34d399' }} />
+                <Typography sx={{ fontSize: '0.845rem', color: '#94a3b8', fontWeight: 600 }}>
+                  Total revenue:{' '}
+                  <Box component="strong" sx={{ color: '#e2e8f0' }}>
+                    {salesChartData.reduce((s, d) => s + d.revenue, 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </Box>
+                </Typography>
+              </Box>
+              <Typography sx={{ fontSize: '0.78rem', color: '#334155' }}>
+                {salesChartData.length}{' '}
+                {salesChartPeriod === 'day' ? 'days' : salesChartPeriod === 'week' ? 'weeks' : salesChartPeriod === 'month' ? 'months' : 'years'}
               </Typography>
             </Box>
           )}
         </CardContent>
       </Card>
 
-      {/* Today's Overview + Alerts */}
-      <Grid container spacing={2.5} sx={{ mb: 3.5 }}>
+      {/* ── Today's Overview + Alerts ── */}
+      <Grid container spacing={2.5} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="overline" sx={{ display: 'block', mb: 1.5, fontSize: typography.fontSizeXs, letterSpacing: typography.label.letterSpacing, fontWeight: typography.fontWeightBold, color: 'text.secondary' }}>
-            TODAY&apos;S OVERVIEW
+          <Typography
+            sx={{
+              display: 'block', mb: 2,
+              fontSize: '0.62rem', letterSpacing: '0.1em', fontWeight: 800,
+              color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase',
+            }}
+          >
+            Today&apos;s Overview
           </Typography>
           <Grid container spacing={2}>
+            {/* Completed card */}
             <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
-              <Card sx={{ width: '100%', background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', border: '1px solid #a7f3d0', transition: 'all 0.25s ease', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 6px 16px rgba(5,150,105,0.12)' } }}>
-                <CardContent sx={{ py: 2, px: 2.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <TrendingUpRoundedIcon sx={{ fontSize: '1rem', color: '#059669' }} />
-                    <Typography variant="caption" sx={{ fontWeight: typography.fontWeightSemiBold, color: '#059669', fontSize: typography.fontSizeXs, textTransform: 'uppercase', letterSpacing: typography.label.letterSpacing }}>
+              <Box sx={{ width: '100%', borderRadius: '18px', p: '1px', background: 'linear-gradient(135deg, #059669, #34d399)', boxShadow: '0 6px 20px rgba(52,211,153,0.25)', transition: 'all 0.25s ease', '&:hover': { transform: 'translateY(-3px)' } }}>
+                <Box sx={{ width: '100%', height: '100%', borderRadius: '17px', background: '#111827', p: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
+                    <TrendingUpRoundedIcon sx={{ fontSize: '1rem', color: '#34d399' }} />
+                    <Typography sx={{ fontWeight: 800, color: '#34d399', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                       Completed
                     </Typography>
                   </Box>
-                  <Typography variant="h4" fontWeight={typography.fontWeightExtraBold} sx={{ fontSize: typography.fontSize3xl, color: '#065f46', letterSpacing: typography.display.letterSpacing }}>
-                    —
+                  <Typography sx={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.035em', color: '#f1f5f9', lineHeight: 1 }}>
+                    {summary.todayCompletedSales ?? 0}
                   </Typography>
-                </CardContent>
-              </Card>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#475569', mt: 0.5 }}>Sales today</Typography>
+                </Box>
+              </Box>
             </Grid>
+            {/* Pending card */}
             <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
-              <Card sx={{ width: '100%', background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)', border: '1px solid #c7d2fe', transition: 'all 0.25s ease', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 6px 16px rgba(79,70,229,0.12)' } }}>
-                <CardContent sx={{ py: 2, px: 2.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <FlagRoundedIcon sx={{ fontSize: '1rem', color: '#4f46e5' }} />
-                    <Typography variant="caption" sx={{ fontWeight: typography.fontWeightSemiBold, color: '#4f46e5', fontSize: typography.fontSizeXs, textTransform: 'uppercase', letterSpacing: typography.label.letterSpacing }}>
+              <Box sx={{ width: '100%', borderRadius: '18px', p: '1px', background: 'linear-gradient(135deg, #6366f1, #818cf8)', boxShadow: '0 6px 20px rgba(99,102,241,0.3)', transition: 'all 0.25s ease', '&:hover': { transform: 'translateY(-3px)' } }}>
+                <Box sx={{ width: '100%', height: '100%', borderRadius: '17px', background: '#111827', p: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
+                    <FlagRoundedIcon sx={{ fontSize: '1rem', color: '#818cf8' }} />
+                    <Typography sx={{ fontWeight: 800, color: '#818cf8', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                       Pending
                     </Typography>
                   </Box>
-                  <Typography variant="h4" fontWeight={typography.fontWeightExtraBold} sx={{ fontSize: typography.fontSize3xl, color: '#312e81', letterSpacing: typography.display.letterSpacing }}>
+                  <Typography sx={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.035em', color: '#f1f5f9', lineHeight: 1 }}>
                     {summary.pendingApprovals + summary.draftPurchaseOrders}
                   </Typography>
-                </CardContent>
-              </Card>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#475569', mt: 0.5 }}>Approvals & drafts</Typography>
+                </Box>
+              </Box>
             </Grid>
           </Grid>
         </Grid>
 
+        {/* Alerts */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="overline" sx={{ display: 'block', mb: 1.5, fontSize: typography.fontSizeXs, letterSpacing: typography.label.letterSpacing, fontWeight: typography.fontWeightBold, color: 'text.secondary' }}>
-            ALERTS
-          </Typography>
-          <Card
+          <Typography
             sx={{
-              bgcolor: summary.lowStockCount > 0 ? '#fef2f2' : '#f9fafb',
-              border: `1px solid ${summary.lowStockCount > 0 ? '#fecaca' : '#f3f4f6'}`,
-              transition: 'all 0.25s ease',
-              '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 6px 16px rgba(0,0,0,0.06)' },
+              display: 'block', mb: 2,
+              fontSize: '0.62rem', letterSpacing: '0.1em', fontWeight: 800,
+              color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase',
             }}
           >
-            <CardContent sx={{ py: 2, px: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+            Alerts
+          </Typography>
+          <Box
+            sx={{
+              borderRadius: '18px',
+              p: '1px',
+              background: summary.lowStockCount > 0
+                ? 'linear-gradient(135deg, #dc2626, #f87171)'
+                : 'linear-gradient(135deg, #334155, #475569)',
+              boxShadow: summary.lowStockCount > 0 ? '0 6px 20px rgba(248,113,113,0.25)' : 'none',
+              transition: 'all 0.25s ease',
+              '&:hover': { transform: 'translateY(-2px)' },
+            }}
+          >
+            <Box
+              sx={{
+                borderRadius: '17px',
+                background: '#111827',
+                p: 2.25,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+              }}
+            >
               <Box
                 sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 3,
-                  bgcolor: summary.lowStockCount > 0 ? 'rgba(220,38,38,0.08)' : 'rgba(156,163,175,0.08)',
+                  width: 52,
+                  height: 52,
+                  borderRadius: '14px',
+                  background: summary.lowStockCount > 0 ? 'rgba(248,113,113,0.12)' : 'rgba(100,116,139,0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
+                  border: `1px solid ${summary.lowStockCount > 0 ? 'rgba(248,113,113,0.25)' : 'rgba(100,116,139,0.15)'}`,
                 }}
               >
-                <WarningAmberRoundedIcon sx={{ color: summary.lowStockCount > 0 ? '#dc2626' : '#9ca3af', fontSize: '1.5rem' }} />
+                <WarningAmberRoundedIcon sx={{ color: summary.lowStockCount > 0 ? '#f87171' : '#475569', fontSize: '1.5rem' }} />
               </Box>
               <Box sx={{ flex: 1 }}>
-                <Typography fontWeight={typography.fontWeightBold} sx={{ color: summary.lowStockCount > 0 ? '#dc2626' : 'text.secondary', fontSize: typography.body.fontSize, mb: 0.25 }}>
+                <Typography sx={{ fontWeight: 700, color: summary.lowStockCount > 0 ? '#f87171' : '#475569', fontSize: '0.9rem', mb: 0.25 }}>
                   {summary.lowStockCount > 0 ? `${summary.lowStockCount} Low Stock Item${summary.lowStockCount !== 1 ? 's' : ''}` : 'No upcoming alerts'}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: typography.fontSizeXs }}>
-                  {summary.lowStockCount > 0 ? 'Reorder supplies needed.' : 'No low stock or pending items.'}
+                <Typography sx={{ fontSize: '0.78rem', color: '#475569' }}>
+                  {summary.lowStockCount > 0 ? 'Reorder supplies needed urgently.' : 'All stock levels are healthy.'}
                 </Typography>
               </Box>
               {summary.lowStockCount > 0 && (
-                <Chip label="Urgent" size="small" sx={{ bgcolor: '#fef2f2', color: '#dc2626', fontWeight: typography.fontWeightBold, fontSize: typography.fontSizeXs, height: 24, border: '1px solid #fecaca' }} />
+                <Chip
+                  label="Urgent"
+                  size="small"
+                  sx={{
+                    background: 'rgba(248,113,113,0.15)',
+                    color: '#f87171',
+                    fontWeight: 700,
+                    fontSize: '0.65rem',
+                    height: 22,
+                    border: '1px solid rgba(248,113,113,0.3)',
+                    flexShrink: 0,
+                  }}
+                />
               )}
-            </CardContent>
-          </Card>
+            </Box>
+          </Box>
         </Grid>
       </Grid>
 
+      {/* ── Quick Actions + Recent Activity ── */}
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="overline" sx={{ display: 'block', mb: 2, fontSize: typography.fontSizeXs, letterSpacing: typography.label.letterSpacing, fontWeight: typography.fontWeightBold, color: 'text.secondary' }}>
-            QUICK ACTIONS
+          <Typography
+            sx={{
+              display: 'block', mb: 2,
+              fontSize: '0.62rem', letterSpacing: '0.1em', fontWeight: 800,
+              color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase',
+            }}
+          >
+            Quick Actions
           </Typography>
           <Grid container spacing={1.5}>
-            {quickActions.map((action) => (
+            {quickActions.map((action, idx) => (
               <Grid size={{ xs: 6 }} key={action.path} sx={{ display: 'flex' }}>
-                <Card
+                <Box
+                  onClick={() => navigate(action.path)}
                   sx={{
                     width: '100%',
+                    borderRadius: '16px',
+                    p: '1px',
+                    background: action.gradient,
+                    boxShadow: `0 4px 16px ${action.glow}`,
                     cursor: 'pointer',
-                    transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+                    transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+                    animation: `fadeInUp 0.4s ease-out ${0.25 + idx * 0.07}s both`,
                     '&:hover': {
-                      transform: 'translateY(-3px)',
-                      boxShadow: `0 8px 24px ${action.color}18`,
-                      borderColor: `${action.color}40`,
+                      transform: 'translateY(-4px) scale(1.02)',
+                      boxShadow: `0 10px 28px ${action.glow}`,
                     },
                   }}
-                  onClick={() => navigate(action.path)}
                 >
-                  <CardContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, textAlign: 'center' }}>
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: '15px',
+                      background: '#111827',
+                      p: 2.25,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      textAlign: 'center',
+                    }}
+                  >
                     <Box
                       sx={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 3,
-                        bgcolor: action.bg,
+                        width: 46,
+                        height: 46,
+                        borderRadius: '13px',
+                        background: action.gradient,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: action.color,
-                        transition: 'all 0.25s ease',
+                        color: '#fff',
+                        boxShadow: `0 4px 12px ${action.glow}`,
                       }}
                     >
                       {action.icon}
                     </Box>
-                    <Typography variant="body2" sx={{ color: 'text.primary', fontSize: typography.body.fontSize, fontWeight: typography.fontWeightSemiBold }}>
+                    <Typography sx={{ color: '#cbd5e1', fontSize: '0.845rem', fontWeight: 600, lineHeight: 1.3 }}>
                       {action.label}
                     </Typography>
-                  </CardContent>
-                </Card>
+                  </Box>
+                </Box>
               </Grid>
             ))}
           </Grid>
         </Grid>
 
+        {/* Recent Activity */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="overline" sx={{ display: 'block', mb: 2, fontSize: typography.fontSizeXs, letterSpacing: typography.label.letterSpacing, fontWeight: typography.fontWeightBold, color: 'text.secondary' }}>
-            RECENT ACTIVITY
+          <Typography
+            sx={{
+              display: 'block', mb: 2,
+              fontSize: '0.62rem', letterSpacing: '0.1em', fontWeight: 800,
+              color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase',
+            }}
+          >
+            Recent Activity
           </Typography>
           <Card sx={{ minHeight: 200 }}>
             <CardContent sx={{ p: 2.5 }}>
@@ -499,12 +688,12 @@ export default function Dashboard() {
                       alignItems: 'flex-start',
                       gap: 1.5,
                       py: 1.5,
-                      borderBottom: i < activityItems.length - 1 ? '1px solid #f3f4f6' : 'none',
+                      borderBottom: i < activityItems.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
                       transition: 'all 0.15s ease',
-                      borderRadius: 1,
+                      borderRadius: '10px',
                       px: 1,
                       mx: -1,
-                      '&:hover': { bgcolor: '#f9fafb' },
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
                     }}
                   >
                     <Box
@@ -513,16 +702,17 @@ export default function Dashboard() {
                         height: 8,
                         borderRadius: '50%',
                         bgcolor: item.dot,
-                        mt: 1,
+                        mt: 0.85,
                         flexShrink: 0,
-                        boxShadow: `0 0 0 3px ${item.dot}20`,
+                        boxShadow: `0 0 0 3px ${item.dotGlow}`,
+                        filter: `drop-shadow(0 0 4px ${item.dot})`,
                       }}
                     />
                     <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: typography.fontWeightMedium, color: 'text.primary', fontSize: typography.body.fontSize, lineHeight: 1.5 }}>
+                      <Typography sx={{ fontWeight: 500, color: '#cbd5e1', fontSize: '0.845rem', lineHeight: 1.5 }}>
                         {item.text}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: typography.fontSizeXs }}>
+                      <Typography sx={{ fontSize: '0.72rem', color: '#334155' }}>
                         {item.time}
                       </Typography>
                     </Box>
@@ -534,28 +724,30 @@ export default function Dashboard() {
         </Grid>
       </Grid>
 
-      {/* Low Stock Table */}
+      {/* ── Low Stock Table ── */}
       {summary.lowStockItems.length > 0 && (
-        <Card sx={{ mt: 3.5 }}>
+        <Card sx={{ mt: 4, animation: 'fadeInUp 0.4s ease-out 0.3s both' }}>
           <CardContent sx={{ p: 2.5 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
               <Box>
-                <Typography variant="subtitle1" fontWeight={typography.fontWeightBold} sx={{ fontSize: typography.fontSizeLg, color: 'text.primary' }}>
-                  Low Stock Items
-                </Typography>
-                <Typography variant="caption" color="text.secondary">Items that need reordering</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25 }}>
+                  <WarningAmberRoundedIcon sx={{ color: '#fbbf24', fontSize: '1.1rem' }} />
+                  <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: '#f1f5f9', letterSpacing: '-0.01em' }}>
+                    Low Stock Items
+                  </Typography>
+                </Box>
+                <Typography sx={{ fontSize: '0.78rem', color: '#475569' }}>Items that need reordering soon</Typography>
               </Box>
               <Button
                 variant="outlined"
                 size="small"
                 endIcon={<ArrowForwardRoundedIcon sx={{ fontSize: '1rem !important' }} />}
-                sx={{ textTransform: 'none', fontWeight: typography.fontWeightSemiBold, borderRadius: 2, fontSize: typography.fontSizeXs }}
                 onClick={() => navigate('/inventory')}
               >
                 View all
               </Button>
             </Box>
-            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '14px', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', background: 'transparent' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
@@ -563,26 +755,26 @@ export default function Dashboard() {
                     <TableCell>Name</TableCell>
                     <TableCell align="right">Current</TableCell>
                     <TableCell align="right">Reorder Level</TableCell>
-                    <TableCell sx={{ width: 140 }}>Status</TableCell>
+                    <TableCell sx={{ width: 150 }}>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {summary.lowStockItems.map((item, _idx) => {
+                  {summary.lowStockItems.map((item) => {
                     const pct = Math.min((item.currentStock / item.reorderLevel) * 100, 100);
-                    const color = pct < 30 ? '#dc2626' : pct < 60 ? '#d97706' : '#059669';
+                    const color = pct < 30 ? '#f87171' : pct < 60 ? '#fbbf24' : '#34d399';
                     return (
                       <TableRow key={item.id}>
                         <TableCell>
-                          <Typography variant="body2" fontFamily={typography.fontFamilyMono} sx={{ fontSize: typography.mono.fontSize, color: 'text.secondary' }}>{item.sku}</Typography>
+                          <Typography sx={{ fontFamily: 'monospace', fontSize: '0.78rem', color: '#475569' }}>{item.sku}</Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" fontWeight={typography.fontWeightSemiBold} sx={{ fontSize: typography.body.fontSize }}>{item.name}</Typography>
+                          <Typography sx={{ fontWeight: 600, fontSize: '0.845rem', color: '#e2e8f0' }}>{item.name}</Typography>
                         </TableCell>
                         <TableCell align="right">
-                          <Typography variant="body2" fontWeight={typography.fontWeightBold} sx={{ color }}>{item.currentStock}</Typography>
+                          <Typography sx={{ fontWeight: 700, color, fontSize: '0.875rem' }}>{item.currentStock}</Typography>
                         </TableCell>
                         <TableCell align="right">
-                          <Typography variant="body2" color="text.secondary">{item.reorderLevel}</Typography>
+                          <Typography sx={{ color: '#475569', fontSize: '0.845rem' }}>{item.reorderLevel}</Typography>
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -593,11 +785,15 @@ export default function Dashboard() {
                                 flex: 1,
                                 height: 6,
                                 borderRadius: 3,
-                                bgcolor: '#f3f4f6',
-                                '& .MuiLinearProgress-bar': { bgcolor: color, borderRadius: 3 },
+                                background: 'rgba(255,255,255,0.07)',
+                                '& .MuiLinearProgress-bar': {
+                                  background: `linear-gradient(90deg, ${color}, ${color}aa)`,
+                                  borderRadius: 3,
+                                  boxShadow: `0 0 8px ${color}60`,
+                                },
                               }}
                             />
-                            <Typography variant="caption" sx={{ color, fontWeight: typography.fontWeightSemiBold, fontSize: typography.fontSizeXs, minWidth: 32 }}>
+                            <Typography sx={{ color, fontWeight: 700, fontSize: '0.72rem', minWidth: 32 }}>
                               {Math.round(pct)}%
                             </Typography>
                           </Box>

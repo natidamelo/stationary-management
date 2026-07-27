@@ -145,6 +145,14 @@ export default function PurchaseRequests() {
       const response = await api.get(`/items/barcode/${encodeURIComponent(barcode.trim())}`);
       const item = response.data;
       if (item) {
+        // Ensure scanned item is present in items state so Autocomplete fills item name and stock info
+        setItems((prev) => {
+          if (!prev.some((i) => i.id === item.id)) {
+            return [...prev, item];
+          }
+          return prev.map((i) => (i.id === item.id ? { ...i, ...item } : i));
+        });
+
         // If this item already exists in formLines, increment quantity
         const existingIdx = formLines.findIndex((l) => l.itemId === item.id);
         if (existingIdx >= 0) {

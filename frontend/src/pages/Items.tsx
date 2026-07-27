@@ -188,9 +188,11 @@ export default function Items() {
       const foundItem = response.data;
 
       if (foundItem) {
+        const stockInfo = foundItem.currentStock !== undefined ? ` • Stock: ${foundItem.currentStock}` : '';
+        const priceInfo = foundItem.price !== undefined ? ` • Price: ${foundItem.price} birr` : '';
         setScanNotification({
           open: true,
-          message: `Found item: "${foundItem.name}". Opening edit dialog.`,
+          message: `Found item: "${foundItem.name}"${priceInfo}${stockInfo}. Opening edit dialog.`,
           severity: 'success',
         });
         openEdit(foundItem);
@@ -281,7 +283,7 @@ export default function Items() {
       name: i.name,
       categoryId: i.categoryId || i.category?.id || '',
       unit: i.unit || 'Piece',
-      initialStock: 0,
+      initialStock: i.currentStock ?? 0,
       reorderLevel: i.reorderLevel ?? 10,
       maxStockLevel: i.maxStockLevel ?? 100,
       price: i.price ?? 0,

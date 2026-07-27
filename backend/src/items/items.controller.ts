@@ -76,8 +76,23 @@ export class ItemsController {
   }
 
   @Get('barcode/:barcode')
-  findByBarcode(@Param('barcode') barcode: string, @Request() req: any) {
-    return this.items.findByBarcode(barcode, req.user.tenantId);
+  async findByBarcode(
+    @Param('barcode') barcode: string,
+    @Query('storeId') queryStoreId: string,
+    @Request() req: any,
+  ) {
+    const item = await this.items.findByBarcode(barcode, req.user.tenantId);
+    if (!item) return null;
+
+    // Attach stock balance for store/tenant
+    const storeId = queryStoreId === 'all' ? undefined : (queryStoreId || req.user.storeId);
+    const balances = await this.inventory.getBalancesForItems(
+      [item.id],
+      req.user.tenantId,
+      storeId || undefined,
+    );
+    (item as any).currentStock = balances[item.id] ?? 0;
+    return item;
   }
 
   @Get(':id')

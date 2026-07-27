@@ -155,6 +155,16 @@ export default function Reception() {
       const item = response.data;
       
       if (item) {
+        // Ensure the scanned item is in local items state so Autocomplete displays item name & info
+        setItems((prev) => {
+          if (!prev.some((i) => i.id === item.id)) {
+            return [...prev, item];
+          }
+          return prev.map((i) => (i.id === item.id ? { ...i, ...item } : i));
+        });
+
+        const price = Number(item.price) || 0;
+
         // Find if item already exists in lines
         const existingLineIndex = lines.findIndex((l) => l.type === 'item' && l.itemId === item.id);
         
@@ -162,7 +172,7 @@ export default function Reception() {
           // Increment quantity if item already in cart
           setLines((prev) => prev.map((l, i) => 
             i === existingLineIndex 
-              ? { ...l, quantity: l.quantity + 1 }
+              ? { ...l, quantity: l.quantity + 1, unitPrice: l.unitPrice || price }
               : l
           ));
         } else {
@@ -172,7 +182,7 @@ export default function Reception() {
               type: 'item' as const,
               itemId: item.id,
               quantity: 1,
-              unitPrice: Number(item.price) || 0,
+              unitPrice: price,
             };
             const lastLine = prev[prev.length - 1];
             const isEmpty = lastLine && !lastLine.itemId && !lastLine.serviceId;
@@ -190,7 +200,7 @@ export default function Reception() {
         setTimeout(() => setSellError(''), 3000);
       }
     } catch (err: unknown) {
-      const res = (err as { response?: { data?: { message?: string } } })?.response?.data.message;
+      const res = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setSellError(res || `Item with barcode "${barcode}" not found.`);
       setTimeout(() => setSellError(''), 3000);
     } finally {

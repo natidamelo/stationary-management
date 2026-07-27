@@ -115,4 +115,26 @@ export class MessagesService {
     await this.messageModel.deleteOne({ _id: mid, tenantId: tid });
     return { success: true };
   }
+
+  async getRecipients(tenantId: string) {
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return [];
+
+    const docs = await this.userModel
+      .find({
+        $or: [{ tenantId: tid }, { tenantId: cleanTenantId }],
+        isActive: { $ne: false },
+      })
+      .populate('roleId')
+      .sort({ fullName: 1 })
+      .lean();
+
+    return docs.map((d: any) => ({
+      id: d._id.toString(),
+      fullName: d.fullName,
+      email: d.email,
+      role: d.roleId ? { id: d.roleId._id?.toString(), name: d.roleId.name } : { name: 'User' },
+    }));
+  }
 }

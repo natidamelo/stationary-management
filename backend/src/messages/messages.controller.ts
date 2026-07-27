@@ -25,6 +25,12 @@ export class MessagesController {
     return this.messagesService.findAll(user.tenantId);
   }
 
+  @Get('recipients')
+  @ApiOperation({ summary: 'Get list of potential recipients' })
+  getRecipients(@CurrentUser() user: UserPayload) {
+    return this.messagesService.getRecipients(user.tenantId);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a message log (Admins only)' })
   remove(@Param('id') id: string, @CurrentUser() user: UserPayload) {

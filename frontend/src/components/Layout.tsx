@@ -142,6 +142,10 @@ export default function Layout() {
     navigate('/login');
   };
 
+  const { isModuleAllowed } = useSettings();
+
+  const isDashboardAllowed = isModuleAllowed(role, '/');
+
   const masterRegistriesGroup = [
     { to: '/categories', label: 'Categories', icon: <Tags className="h-4 w-4" /> },
     ...(role === 'admin' || role === 'manager' || role === 'dealer'
@@ -150,7 +154,7 @@ export default function Layout() {
     { to: '/suppliers', label: 'Suppliers', icon: <Truck className="h-4 w-4" /> },
     { to: '/items', label: 'Products', icon: <Package className="h-4 w-4" /> },
     { to: '/customers', label: 'Customers', icon: <Users className="h-4 w-4" /> },
-  ];
+  ].filter((link) => isModuleAllowed(role, link.to));
 
   const transactionsGroup = [
     { to: '/purchase-requests', label: 'Requisitions', icon: <ClipboardList className="h-4 w-4" /> },
@@ -158,10 +162,8 @@ export default function Layout() {
     { to: '/goods-receiving', label: 'Goods Receiving', icon: <PackageCheck className="h-4 w-4" /> },
     { to: '/item-issues', label: 'Item Issues', icon: <PackageMinus className="h-4 w-4" /> },
     { to: '/store-transfers', label: 'Store Transfers', icon: <ArrowLeftRight className="h-4 w-4" /> },
-    ...(role === 'reception' || role === 'admin' || role === 'manager' || role === 'dealer'
-      ? [{ to: '/reception', label: 'Sales', icon: <Receipt className="h-4 w-4" /> }]
-      : []),
-  ];
+    { to: '/reception', label: 'Sales', icon: <Receipt className="h-4 w-4" /> },
+  ].filter((link) => isModuleAllowed(role, link.to));
 
   const adminGroup = [
     ...(role === 'admin' || role === 'manager' || role === 'dealer'
@@ -171,7 +173,7 @@ export default function Layout() {
     ...(role === 'admin' || role === 'manager' || role === 'dealer'
       ? [{ to: '/reports', label: 'Reports', icon: <BarChart3 className="h-4 w-4" /> }]
       : []),
-  ];
+  ].filter((link) => isModuleAllowed(role, link.to));
 
   const dealerGroup = [
     ...(role === 'dealer'
@@ -180,7 +182,7 @@ export default function Layout() {
           { to: '/licenses', label: 'Licenses', icon: <KeyRound className="h-4 w-4" /> },
         ]
       : []),
-  ];
+  ].filter((link) => isModuleAllowed(role, link.to));
 
   const SectionLabel = ({ children }: { children: React.ReactNode }) => (
     <div className="flex items-center gap-2 px-3 mt-5 mb-1.5">
@@ -247,16 +249,28 @@ export default function Layout() {
 
       {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto py-1 space-y-0.5">
-        {renderLink({ to: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> })}
+        {isDashboardAllowed && renderLink({ to: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> })}
 
-        <SectionLabel>Master Registries</SectionLabel>
-        {masterRegistriesGroup.map(renderLink)}
+        {masterRegistriesGroup.length > 0 && (
+          <>
+            <SectionLabel>Master Registries</SectionLabel>
+            {masterRegistriesGroup.map(renderLink)}
+          </>
+        )}
 
-        <SectionLabel>Transactions & Sales</SectionLabel>
-        {transactionsGroup.map(renderLink)}
+        {transactionsGroup.length > 0 && (
+          <>
+            <SectionLabel>Transactions & Sales</SectionLabel>
+            {transactionsGroup.map(renderLink)}
+          </>
+        )}
 
-        <SectionLabel>Admin & Reports</SectionLabel>
-        {adminGroup.map(renderLink)}
+        {adminGroup.length > 0 && (
+          <>
+            <SectionLabel>Admin & Reports</SectionLabel>
+            {adminGroup.map(renderLink)}
+          </>
+        )}
 
         {dealerGroup.length > 0 && (
           <>

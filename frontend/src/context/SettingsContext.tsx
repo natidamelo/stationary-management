@@ -1,9 +1,39 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 
-type Settings = {
+export type RolePermissionsMap = Record<string, string[]>;
+
+export const ALL_MENU_MODULES = [
+  { path: '/', label: 'Dashboard' },
+  { path: '/categories', label: 'Categories' },
+  { path: '/stores', label: 'Stores' },
+  { path: '/suppliers', label: 'Suppliers' },
+  { path: '/items', label: 'Products' },
+  { path: '/customers', label: 'Customers' },
+  { path: '/purchase-requests', label: 'Requisitions' },
+  { path: '/purchase-orders', label: 'Orders' },
+  { path: '/goods-receiving', label: 'Goods Receiving' },
+  { path: '/item-issues', label: 'Item Issues' },
+  { path: '/store-transfers', label: 'Store Transfers' },
+  { path: '/reception', label: 'Sales (Reception)' },
+  { path: '/users', label: 'Users' },
+  { path: '/messages', label: 'Messages' },
+  { path: '/reports', label: 'Reports' },
+];
+
+export const DEFAULT_ROLE_PERMISSIONS: RolePermissionsMap = {
+  admin: ALL_MENU_MODULES.map((m) => m.path),
+  dealer: [...ALL_MENU_MODULES.map((m) => m.path), '/registered-tenants', '/licenses'],
+  manager: ALL_MENU_MODULES.map((m) => m.path),
+  reception: ['/reception', '/items', '/customers', '/messages'],
+  user: ['/', '/categories', '/suppliers', '/items', '/customers', '/purchase-requests', '/goods-receiving', '/item-issues', '/store-transfers', '/messages'],
+  inventory_clerk: ['/', '/categories', '/suppliers', '/items', '/purchase-requests', '/goods-receiving', '/item-issues', '/store-transfers', '/messages'],
+};
+
+export type Settings = {
   stationeryName: string;
   logoUrl: string | null;
+  rolePermissions: RolePermissionsMap;
 };
 
 type ThemeMode = 'light' | 'dark';
@@ -14,11 +44,13 @@ type SettingsContextType = {
   updateSettings: (updates: Partial<Settings>) => void;
   toggleTheme: () => void;
   uploadLogo: (file: File) => Promise<string>;
+  isModuleAllowed: (role: string, path: string) => boolean;
 };
 
 const defaultSettings: Settings = {
   stationeryName: 'Stationery',
   logoUrl: null,
+  rolePermissions: DEFAULT_ROLE_PERMISSIONS,
 };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
@@ -42,7 +74,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (logoUrl && logoUrl.startsWith('/api/uploads')) {
           logoUrl = null;
         }
-        setSettings({ ...defaultSettings, ...parsed, logoUrl });
+        
+        // Merge with default role permissions to ensure any new role/path exists
+        const mergedPermissions: RolePermissionsMap = { ...DEFAULT_ROLE_PERMISSIONS };
+        if (parsed.rolePermissions) {
+          Object.keys(parsed.rolePermissions).forEach((roleKey) => {
+            mergedPermissions[roleKey] = parsed.rolePermissions[roleKey];
+          });
+        }
+
+        setSettings({ ...defaultSettings, ...parsed, logoUrl, rolePermissions: mergedPermissions });
       } catch {
         // Invalid JSON, use defaults
       }
@@ -76,8 +117,29 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return dataUrl;
   };
 
+  const isModuleAllowed = (roleName: string, path: string): boolean => {
+    const normalizedRole = (roleName || 'user').toLowerCase().trim();
+    
+    // Admin and dealer always have full access
+    if (normalizedRole === 'admin' || normalizedRole === 'dealer') {
+      return true;
+    }
+
+    const rolePaths = settings.rolePermissions[normalizedRole] || DEFAULT_ROLE_PERMISSIONS[normalizedRole] || DEFAULT_ROLE_PERMISSIONS['user'];
+    return rolePaths.includes(path);
+  };
+
   return (
-    <SettingsContext.Provider value={{ settings, themeMode: (theme as ThemeMode) || themeMode, updateSettings, toggleTheme, uploadLogo }}>
+    <SettingsContext.Provider 
+      value={{ 
+        settings, 
+        themeMode: (theme as ThemeMode) || themeMode, 
+        updateSettings, 
+        toggleTheme, 
+        uploadLogo,
+        isModuleAllowed,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );

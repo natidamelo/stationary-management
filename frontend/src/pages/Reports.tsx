@@ -318,16 +318,99 @@ export default function Reports() {
     doc.setFont('helvetica', 'normal');
     doc.save(`sales-report-${period}-${new Date().toISOString().slice(0, 10)}.pdf`);
   };
-  const downloadCsv = async () => {
-    const token = localStorage.getItem('token');
-    const r = await fetch('/api/reports/stock/csv', { headers: { Authorization: `Bearer ${token}` } });
-    const blob = await r.blob();
+  const triggerDownload = (csvText: string, filename: string) => {
+    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'stock-report.csv';
+    a.download = filename;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const downloadCsv = () => {
+    const currentTab = TAB_OPTIONS[activeTab]?.id;
+    let csvContent = '\uFEFF'; // UTF-8 BOM so Microsoft Excel renders characters and columns cleanly
+
+    if (currentTab === 'sales') {
+      csvContent += 'Sale #,Date/Time,Receptionist,Customer,Payment Method,Line Items Summary,Total Revenue (ETB),Amount Paid (ETB),Balance Due (ETB),Notes\n';
+      if (salesReportData?.sales?.length) {
+        salesReportData.sales.forEach((s) => {
+          const lineSummary = s.lines ? s.lines.map((l) => `${l.name} (${l.quantity}x${l.unitPrice})`).join('; ') : '';
+          const row = [
+            s.saleNumber,
+            s.soldAt ? new Date(s.soldAt).toLocaleString() : '',
+            s.soldBy || '',
+            s.customerName || '-',
+            s.paymentMethod || 'cash',
+            `"${lineSummary.replace(/"/g, '""')}"`,
+            (s.totalAmount || 0).toFixed(2),
+            (s.amountPaid || 0).toFixed(2),
+            (s.balanceDue || 0).toFixed(2),
+            `"${(s.notes || '').replace(/"/g, '""')}"`,
+          ];
+          csvContent += row.join(',') + '\n';
+        });
+      } else {
+        csvContent += 'No sales transactions recorded for this period\n';
+      }
+      triggerDownload(csvContent, `sales-report-${period}-${new Date().toISOString().slice(0, 10)}.csv`);
+    } else if (currentTab === 'financial') {
+      csvContent += 'Financial Metric,Amount (ETB),Details\n';
+      if (costProfit) {
+        csvContent += `Total Sales Revenue,${(costProfit.revenue || 0).toFixed(2)},Gross Sales Revenue\n`;
+        csvContent += `Cost of Goods / Purchase Cost,${(costProfit.purchaseCost || 0).toFixed(2)},Inventory Purchasing Cost\n`;
+        csvContent += `Operating Expenses Total,${(costProfit.operatingExpensesTotal || costProfit.operatingExpenses?.reduce((a,b)=>a+b.amount,0) || 0).toFixed(2)},OpEx Total\n`;
+        csvContent += `Net Profit / Loss,${(costProfit.profit || costProfit.netProfit || 0).toFixed(2)},Net Return\n`;
+        csvContent += `Profit Margin %,${(costProfit.marginPercent || costProfit.netMarginPct || 0).toFixed(2)}%,\n\n`;
+
+        if (costProfit.operatingExpenses?.length) {
+          csvContent += 'Operating Expenses Breakdown\nDate,Description,Category,Amount (ETB)\n';
+          costProfit.operatingExpenses.forEach((exp) => {
+            csvContent += `${exp.date},"${(exp.description || '').replace(/"/g, '""')}",${exp.category || 'General'},${exp.amount.toFixed(2)}\n`;
+          });
+        }
+      }
+      triggerDownload(csvContent, `financial-report-${period}-${new Date().toISOString().slice(0, 10)}.csv`);
+    } else if (currentTab === 'service') {
+      csvContent += 'Item SKU,Item Name,Quantity Issued / Served\n';
+      if (serviceAnalytics?.topItems?.length) {
+        serviceAnalytics.topItems.forEach((item) => {
+          csvContent += `${item.sku},"${(item.itemName || '').replace(/"/g, '""')}",${item.quantity}\n`;
+        });
+      }
+      triggerDownload(csvContent, `service-analytics-${period}-${new Date().toISOString().slice(0, 10)}.csv`);
+    } else if (currentTab === 'stock') {
+      csvContent += 'SKU,Item Name,Stock Received (IN),Stock Issued (OUT),Net Movement\n';
+      if (stockByPeriod?.byItem?.length) {
+        stockByPeriod.byItem.forEach((i) => {
+          const net = (i.in || 0) - (i.out || 0);
+          csvContent += `${i.sku},"${(i.name || '').replace(/"/g, '""')}",${i.in || 0},${i.out || 0},${net}\n`;
+        });
+      }
+      triggerDownload(csvContent, `stock-movement-${period}-${new Date().toISOString().slice(0, 10)}.csv`);
+    } else if (currentTab === 'inventory') {
+      csvContent += 'SKU,Name,Category,Unit,Reorder Level,Current Stock,Price (ETB),Total Valuation (ETB)\n';
+      const itemsList = inventoryReport?.items || [];
+      itemsList.forEach((r) => {
+        const val = (r.currentStock || 0) * (r.price || 0);
+        csvContent += `${r.sku},"${(r.name || '').replace(/"/g, '""')}",${r.category || 'Uncategorized'},${r.unit || 'Piece'},${r.reorderLevel || 0},${r.currentStock || 0},${(r.price || 0).toFixed(2)},${val.toFixed(2)}\n`;
+      });
+      triggerDownload(csvContent, `inventory-report-${new Date().toISOString().slice(0, 10)}.csv`);
+    } else {
+      csvContent += 'Business Metric,Value\n';
+      if (overview) {
+        csvContent += `Total Items,${overview.totalItems || 0}\n`;
+        csvContent += `Total Categories,${overview.totalCategories || 0}\n`;
+        csvContent += `Total Suppliers,${overview.totalSuppliers || 0}\n`;
+        csvContent += `Low Stock Count,${overview.lowStockCount || 0}\n`;
+        csvContent += `Sales Last 30 Days,${overview.salesLast30Days || 0}\n`;
+        csvContent += `Distributions Last 30 Days,${overview.distributionsLast30Days || 0}\n`;
+      }
+      triggerDownload(csvContent, `business-overview-${new Date().toISOString().slice(0, 10)}.csv`);
+    }
   };
   const getMaxQuantity = () => (serviceAnalytics?.topItems?.length ? Math.max(...serviceAnalytics.topItems.map((i) => i.quantity), 1) : 1);
 

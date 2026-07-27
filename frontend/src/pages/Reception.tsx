@@ -281,7 +281,7 @@ export default function Reception() {
       type: 'item' as const, 
       label: `${i.name} (${i.sku})`,
       categoryName: i.category?.name || 'Uncategorized',
-      searchString: `${i.name} ${i.sku} ${i.category?.name || ''}`.toLowerCase()
+      searchString: `${i.name} ${i.sku} ${i.barcode || ''} ${i.category?.name || ''}`.toLowerCase()
     })),
     ...services.map(s => ({ 
       ...s, 
@@ -507,7 +507,7 @@ export default function Reception() {
                       </Avatar>
                       <ListItemText 
                         primary={option.name}
-                        secondary={option.type === 'item' ? `SKU: ${option.sku} • ${Number(option.price).toFixed(2)} birr` : `Service • ${Number(option.sellingPrice || option.price || 0).toFixed(2)} birr`}
+                        secondary={option.type === 'item' ? `SKU: ${option.sku} • Stock: ${option.currentStock ?? 0} • ${Number(option.price).toFixed(2)} birr` : `Service • ${Number(option.sellingPrice || option.price || 0).toFixed(2)} birr`}
                         primaryTypographyProps={{ fontWeight: 600 }}
                       />
                       {option.type === 'item' && option.categoryName !== 'Uncategorized' && (
@@ -570,12 +570,12 @@ export default function Reception() {
                         <Autocomplete
                           size="small"
                           options={items}
-                          getOptionLabel={(i) => i.name}
+                          getOptionLabel={(i) => i.name ? `${i.name} (${i.sku}) • Stock: ${i.currentStock ?? 0}` : ''}
                           value={items.find(i => i.id === line.itemId) || null}
                           onChange={(_, item) => {
                             setLines((p) => p.map((l, i) => (i === idx ? { ...l, itemId: item?.id || '', unitPrice: item ? Number(item.price) : 0 } : l)));
                           }}
-                          sx={{ minWidth: 200, flex: '2 1 150px' }}
+                          sx={{ minWidth: 220, flex: '2 1 150px' }}
                           renderInput={(params) => <TextField {...params} placeholder="Select item" variant="standard" />}
                         />
                       ) : (

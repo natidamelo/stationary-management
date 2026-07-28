@@ -127,31 +127,17 @@ export default function StockManagement() {
     }
     
     try {
-      const isEAN13 = /^\d{13}$/.test(barcode);
       const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      try {
-        JsBarcode(svgEl, barcode, {
-          format: isEAN13 ? 'EAN13' : 'CODE128',
-          width: 3, 
-          height: 100, 
-          displayValue: true,
-          fontSize: 18,
-          margin: 10,
-          background: '#ffffff',
-          lineColor: '#000000',
-        });
-      } catch (err) {
-        JsBarcode(svgEl, barcode, {
-          format: 'CODE128',
-          width: 3, 
-          height: 100, 
-          displayValue: true,
-          fontSize: 18,
-          margin: 10,
-          background: '#ffffff',
-          lineColor: '#000000',
-        });
-      }
+      JsBarcode(svgEl, barcode, {
+        format: 'CODE128',
+        width: 3, 
+        height: 100, 
+        displayValue: true,
+        fontSize: 18,
+        margin: 15,
+        background: '#ffffff',
+        lineColor: '#000000',
+      });
 
       const svgString = new XMLSerializer().serializeToString(svgEl);
 

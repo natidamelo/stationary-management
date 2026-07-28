@@ -392,8 +392,8 @@ export class ItemsService {
 
     let updated = 0;
     for (const item of items) {
-      const isInvalidSku = !isValidEAN13(item.sku);
-      const isInvalidBarcode = !isValidEAN13(item.barcode);
+      const isInvalidSku = !item.sku || !item.sku.startsWith('871') || !isValidEAN13(item.sku);
+      const isInvalidBarcode = !item.barcode || !item.barcode.startsWith('871') || !isValidEAN13(item.barcode);
 
       if (isInvalidSku || isInvalidBarcode) {
         maxSeq++;

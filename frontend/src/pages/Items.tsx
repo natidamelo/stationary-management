@@ -404,10 +404,11 @@ export default function Items() {
       JsBarcode(svgEl, barcode, {
         format: 'CODE128',
         width: 2,
-        height: 60,
+        height: 55,
         displayValue: true,
-        fontSize: 14,
-        margin: 8,
+        fontOptions: 'bold',
+        fontSize: 16,
+        margin: 6,
         background: '#ffffff',
         lineColor: '#000000',
       });
@@ -417,7 +418,7 @@ export default function Items() {
       const labelHtml = `
         <div class="label">
           <div class="item-name">${item.name}</div>
-          <div class="item-sku">SKU: ${item.sku}</div>
+          <div class="item-sku">SKU: <strong>${item.sku}</strong></div>
           <div class="barcode-svg">${svgString}</div>
         </div>`;
 
@@ -439,11 +440,12 @@ export default function Items() {
               * { box-sizing: border-box; }
               body { font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 4mm; }
               .grid { display: flex; flex-wrap: wrap; gap: 3mm; justify-content: flex-start; }
-              .label { width: 60mm; height: auto; min-height: 32mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; border: 0.3mm solid #ccc; page-break-inside: avoid; background: #fff; border-radius: 2mm; }
-              .item-name { font-size: 9pt; font-weight: bold; line-height: 1.2; max-width: 56mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 1mm; text-align: center; }
-              .item-sku { font-size: 7.5pt; color: #555; margin-bottom: 1mm; text-align: center; }
+              .label { width: 60mm; height: auto; min-height: 34mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; border: 0.3mm solid #000; page-break-inside: avoid; background: #fff; border-radius: 2mm; }
+              .item-name { font-size: 10pt; font-weight: 800; color: #000; line-height: 1.2; max-width: 56mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 1mm; text-align: center; }
+              .item-sku { font-size: 9pt; font-weight: 700; color: #000; margin-bottom: 1mm; text-align: center; }
               .barcode-svg { display: flex; justify-content: center; width: 100%; }
-              .barcode-svg svg { width: 52mm; height: auto; display: block; shape-rendering: crispEdges; }
+              .barcode-svg svg { width: 54mm; height: auto; display: block; shape-rendering: crispEdges; }
+              .barcode-svg svg text { font-weight: 800 !important; fill: #000000 !important; font-size: 15px !important; }
               .barcode-svg rect { shape-rendering: crispEdges; }
             </style>
           </head>

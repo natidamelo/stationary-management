@@ -303,7 +303,7 @@ export default function Messages() {
 
       <Grid container spacing={3}>
         {/* Left Column: Compose Message */}
-        <Grid item xs={12} md={5} lg={4.5}>
+        <Grid size={{ xs: 12, md: 5, lg: 4.5 }}>
           <Card
             sx={{
               borderRadius: 4,
@@ -479,7 +479,7 @@ export default function Messages() {
         </Grid>
 
         {/* Right Column: Message Feed */}
-        <Grid item xs={12} md={7} lg={7.5}>
+        <Grid size={{ xs: 12, md: 7, lg: 7.5 }}>
           <Card
             sx={{
               height: '100%',

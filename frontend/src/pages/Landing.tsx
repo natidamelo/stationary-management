@@ -176,7 +176,7 @@ export default function Landing() {
           </Typography>
           <Grid container spacing={4}>
             {features.map((f, i) => (
-              <Grid item xs={12} md={6} lg={3} key={i}>
+              <Grid size={{ xs: 12, md: 6, lg: 3 }} key={i}>
                 <Paper sx={{ 
                   p: 4, 
                   height: '100%', 

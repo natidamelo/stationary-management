@@ -14,6 +14,8 @@ export function useUsbBarcodeScanner(
 ) {
   const bufferRef = useRef<string>('');
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastKeyTimeRef = useRef<number>(0);
+  const firstKeyTimeRef = useRef<number>(0);
   const excludeIds = options?.excludeIds || [];
   
   const onScanRef = useRef(onScan);
@@ -22,49 +24,6 @@ export function useUsbBarcodeScanner(
   }, [onScan]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore key combinations with Control, Alt, or Command
-      if (e.metaKey || e.ctrlKey || e.altKey) {
-        return;
-      }
-
-      const isEnter = e.key === 'Enter' || e.key === 'NumpadEnter' || e.key === 'Tab';
-
-      if (isEnter) {
-        const barcode = bufferRef.current.trim().replace(/[\r\n]/g, '');
-        
-        if (barcode.length >= 2) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          bufferRef.current = '';
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-
-          cleanActiveElement(barcode);
-          onScanRef.current(barcode);
-        } else {
-          bufferRef.current = '';
-        }
-        return;
-      }
-
-      // Buffer printable characters (length of 1)
-      if (e.key.length === 1) {
-        bufferRef.current += e.key;
-
-        // Reset buffer if no key arrives within 250ms (differentiates fast human typing vs barcode stream)
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-        timeoutRef.current = setTimeout(() => {
-          bufferRef.current = '';
-        }, 250);
-      }
-    };
-
     const cleanActiveElement = (barcode: string) => {
       const activeEl = document.activeElement;
       if (!activeEl) return;
@@ -92,6 +51,71 @@ export function useUsbBarcodeScanner(
       }
     };
 
+    const processScan = (rawBarcode: string) => {
+      const barcode = rawBarcode.trim().replace(/[\r\n]/g, '');
+      if (barcode.length >= 2) {
+        cleanActiveElement(barcode);
+        onScanRef.current(barcode);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore key combinations with Control, Alt, or Command
+      if (e.metaKey || e.ctrlKey || e.altKey) {
+        return;
+      }
+
+      const now = Date.now();
+      const isEnter = e.key === 'Enter' || e.key === 'NumpadEnter' || e.key === 'Tab';
+
+      if (isEnter) {
+        if (bufferRef.current.length >= 2) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const barcode = bufferRef.current;
+          bufferRef.current = '';
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+
+          processScan(barcode);
+        } else {
+          bufferRef.current = '';
+        }
+        return;
+      }
+
+      // Buffer printable characters (length of 1)
+      if (e.key.length === 1) {
+        if (bufferRef.current.length === 0) {
+          firstKeyTimeRef.current = now;
+        }
+        bufferRef.current += e.key;
+        lastKeyTimeRef.current = now;
+
+        // Reset buffer if typing pauses
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+
+        timeoutRef.current = setTimeout(() => {
+          const buffer = bufferRef.current;
+          const charCount = buffer.length;
+          const totalDuration = lastKeyTimeRef.current - firstKeyTimeRef.current;
+          const avgPerChar = charCount > 1 ? totalDuration / (charCount - 1) : 999;
+
+          // If scanned rapidly (e.g. 4+ chars scanned with avg < 90ms per keypress),
+          // commit barcode scan automatically even if scanner lacks Enter suffix
+          if (charCount >= 4 && (avgPerChar < 90 || totalDuration < 150)) {
+            processScan(buffer);
+          }
+          bufferRef.current = '';
+        }, 180);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown, true);
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
@@ -101,3 +125,4 @@ export function useUsbBarcodeScanner(
     };
   }, [excludeIds]);
 }
+

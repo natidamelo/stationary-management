@@ -111,11 +111,11 @@ export default function Invoices() {
       const inv = viewInvoice;
 
       // Standard RGB color definitions
-      const indigo = [79, 70, 229];
-      const gray = [100, 116, 139];
-      const success = [16, 185, 129];
-      const warning = [249, 115, 22];
-      const slate = [226, 232, 240];
+      const indigo: [number, number, number] = [79, 70, 229];
+      const gray: [number, number, number] = [100, 116, 139];
+      const success: [number, number, number] = [16, 185, 129];
+      const warning: [number, number, number] = [249, 115, 22];
+      const slate: [number, number, number] = [226, 232, 240];
 
       // Add Logo or Header Title
       if (settings.logoUrl) {
@@ -175,7 +175,7 @@ export default function Invoices() {
           `$${Number(line.total).toFixed(2)}`
         ]),
         styles: { fontSize: 9, cellPadding: 5 },
-        headStyles: { fillColor: indigo, textColor: [255, 255, 255], fontStyle: 'bold' },
+        headStyles: { fillColor: indigo, textColor: '#ffffff', fontStyle: 'bold' },
         columnStyles: {
           2: { halign: 'right' },
           3: { halign: 'right' },

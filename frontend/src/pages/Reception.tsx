@@ -84,7 +84,7 @@ type Line = {
 
 export default function Reception() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
-  const [items, setItems] = useState<Array<{ id: string; name: string; sku: string; price: number; barcode?: string; category?: { id: string; name: string }; imageUrl?: string }>>([]);
+  const [items, setItems] = useState<Array<{ id: string; name: string; sku: string; price: number; barcode?: string; category?: { id: string; name: string }; imageUrl?: string; currentStock?: number }>>([]);
   const [services, setServices] = useState<Array<{ id: string; name: string; sellingPrice: number; price?: number }>>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);

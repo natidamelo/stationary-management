@@ -28,7 +28,7 @@ export default function FinancialReports() {
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {metrics.map((m, idx) => (
-          <Grid item xs={12} sm={6} md={3} key={idx}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={idx}>
             <Card sx={{ height: '100%' }}>
               <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>

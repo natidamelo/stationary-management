@@ -868,7 +868,7 @@ export default function Items() {
                 onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
                 fullWidth
                 placeholder="e.g. 880123456"
-                helperText="Leave empty to use SKU as barcode"
+                helperText="Scan or enter existing product barcode (e.g. from bottle/box), or leave empty to auto-generate"
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">

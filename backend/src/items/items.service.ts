@@ -254,12 +254,20 @@ export class ItemsService {
       ? [{ tenantId: tid }, { tenantId: cleanTenantId }] 
       : [{ tenantId: cleanTenantId }];
 
-    const barcodeConditions = [
+    const barcodeConditions: any[] = [
       { barcode: cleanBarcode }, 
       { sku: cleanBarcode }, 
       { barcode: barcodeRegex }, 
       { sku: barcodeRegex }
     ];
+
+    if (/^\d{12,13}$/.test(cleanBarcode)) {
+      const stripped = cleanBarcode.replace(/^0+/, '');
+      if (stripped && stripped !== cleanBarcode) {
+        barcodeConditions.push({ barcode: new RegExp(stripped + '$', 'i') });
+        barcodeConditions.push({ sku: new RegExp(stripped + '$', 'i') });
+      }
+    }
 
     let doc = await this.model.findOne({ 
       $and: [

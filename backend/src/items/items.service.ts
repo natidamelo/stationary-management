@@ -57,17 +57,22 @@ export class ItemsService {
 
   async generateNextSku(tenantId: string): Promise<string> {
     const tid = toObjectId(tenantId);
-    if (!tid) return 'item-00001';
+    if (!tid) return '10001';
     
-    // Find tenant name for prefix
-    const tenant = await this.model.db.collection('tenants').findOne({ _id: tid });
-    const name = tenant ? tenant.name : 'item';
-    const prefix = name.toLowerCase().replace(/[^a-z]/g, '').substring(0, 4) || 'item';
+    // Find the highest existing numeric SKU for this tenant
+    const docs = await this.model.find({ tenantId: tid })
+      .select('sku')
+      .lean();
     
-    // Count existing items for this tenant
-    const count = await this.model.countDocuments({ tenantId: tid });
-    const num = count + 1;
-    return `${prefix}-${String(num).padStart(5, '0')}`;
+    let maxNum = 10000; // Start from 10001
+    for (const doc of docs) {
+      const num = parseInt(doc.sku, 10);
+      if (!isNaN(num) && num > maxNum) {
+        maxNum = num;
+      }
+    }
+    
+    return String(maxNum + 1);
   }
 
   async create(dto: CreateItemDto, user: { id: string; tenantId: string; storeId?: string }) {

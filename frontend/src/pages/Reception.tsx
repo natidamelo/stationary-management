@@ -146,16 +146,24 @@ export default function Reception() {
     }
   }, [dashboard, items, services]);
 
+  const lastScanRef = useRef<{ code: string; time: number }>({ code: '', time: 0 });
+
   const handleBarcodeScan = async (barcode: string) => {
-    if (!barcode.trim()) return;
-    
+    const clean = barcode.trim();
+    if (!clean) return;
+
+    const now = Date.now();
+    if (lastScanRef.current.code === clean && (now - lastScanRef.current.time) < 500) {
+      return;
+    }
+    lastScanRef.current = { code: clean, time: now };
+
     setScanningBarcode(true);
     try {
-      const response = await api.get(`/items/barcode/${encodeURIComponent(barcode.trim())}`);
+      const response = await api.get(`/items/barcode/${encodeURIComponent(clean)}`);
       const item = response.data;
       
       if (item) {
-        // Ensure the scanned item is in local items state so Autocomplete displays item name & info
         setItems((prev) => {
           if (!prev.some((i) => i.id === item.id)) {
             return [...prev, item];
@@ -165,19 +173,15 @@ export default function Reception() {
 
         const price = Number(item.price) || 0;
 
-        // Find if item already exists in lines
-        const existingLineIndex = lines.findIndex((l) => l.type === 'item' && l.itemId === item.id);
-        
-        if (existingLineIndex >= 0) {
-          // Increment quantity if item already in cart
-          setLines((prev) => prev.map((l, i) => 
-            i === existingLineIndex 
-              ? { ...l, quantity: l.quantity + 1, unitPrice: l.unitPrice || price }
-              : l
-          ));
-        } else {
-          // Add new line with the scanned item
-          setLines((prev) => {
+        setLines((prev) => {
+          const existingLineIndex = prev.findIndex((l) => l.type === 'item' && l.itemId === item.id);
+          if (existingLineIndex >= 0) {
+            return prev.map((l, i) => 
+              i === existingLineIndex 
+                ? { ...l, quantity: l.quantity + 1, unitPrice: l.unitPrice || price }
+                : l
+            );
+          } else {
             const newLine: Line = {
               type: 'item' as const,
               itemId: item.id,
@@ -190,18 +194,18 @@ export default function Reception() {
               return [...prev.slice(0, -1), newLine];
             }
             return [...prev, newLine];
-          });
-        }
+          }
+        });
+
         setBarcodeInput('');
-        // Focus back on barcode input for next scan
         setTimeout(() => barcodeInputRef.current?.focus(), 100);
       } else {
-        setSellError(`Item with barcode "${barcode}" not found.`);
+        setSellError(`Item with barcode "${clean}" not found.`);
         setTimeout(() => setSellError(''), 3000);
       }
     } catch (err: unknown) {
       const res = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setSellError(res || `Item with barcode "${barcode}" not found.`);
+      setSellError(res || `Item with barcode "${clean}" not found.`);
       setTimeout(() => setSellError(''), 3000);
     } finally {
       setScanningBarcode(false);
@@ -215,27 +219,11 @@ export default function Reception() {
 
   const handleBarcodeInputChange = (value: string) => {
     setBarcodeInput(value);
-    
-    // Clear existing timeout
-    if (barcodeTimeoutRef.current) {
-      clearTimeout(barcodeTimeoutRef.current);
-    }
-    
-    // If Enter is pressed or barcode scanner sends data (usually ends with Enter)
-    // Wait a bit for complete barcode input (scanners send data quickly)
-    barcodeTimeoutRef.current = setTimeout(() => {
-      if (value.trim()) {
-        handleBarcodeScan(value);
-      }
-    }, 300); // 300ms delay to capture full barcode from scanner
   };
 
   const handleBarcodeKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && barcodeInput.trim()) {
       e.preventDefault();
-      if (barcodeTimeoutRef.current) {
-        clearTimeout(barcodeTimeoutRef.current);
-      }
       handleBarcodeScan(barcodeInput);
     }
   };

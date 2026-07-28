@@ -43,6 +43,13 @@ export class ItemsController {
     return { sku };
   }
 
+  @Post('fix-legacy-barcodes')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.INVENTORY_CLERK, RoleEnum.MANAGER, RoleEnum.DEALER)
+  fixLegacyBarcodes(@Request() req: any) {
+    return this.items.fixLegacyBarcodes(req.user.tenantId);
+  }
+
   @Get()
   async list(
     @Request() req: any,

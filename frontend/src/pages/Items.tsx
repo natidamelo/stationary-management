@@ -372,6 +372,20 @@ export default function Items() {
     }
   };
 
+  const handleFixLegacyBarcodes = async () => {
+    try {
+      const res = await api.post<{ updated: number }>('/items/fix-legacy-barcodes');
+      if (res.data.updated > 0) {
+        alert(`Successfully converted ${res.data.updated} old text SKUs/barcodes to clean numeric barcodes!`);
+        load();
+      } else {
+        alert('All items already have numeric SKUs and barcodes!');
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to convert barcodes');
+    }
+  };
+
   const handleOpenPrintDialog = (item: Item) => {
     setItemToPrint(item);
     setPrintCount(20);
@@ -514,14 +528,24 @@ export default function Items() {
           <Typography variant="body2" color="text.secondary">View, add, edit, and manage physical inventory levels.</Typography>
         </Box>
         {canEdit(user?.role ?? '') && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={openAdd}
-            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, textTransform: 'none', px: 2.5, py: 1, borderRadius: 2, fontWeight: typography.fontWeightSemiBold }}
-          >
-            Add Product
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
+            <Button
+              variant="outlined"
+              color="warning"
+              onClick={handleFixLegacyBarcodes}
+              sx={{ textTransform: 'none', px: 2, py: 1, borderRadius: 2, fontWeight: typography.fontWeightSemiBold }}
+            >
+              Convert Old Barcodes to Numeric
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={openAdd}
+              sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' }, textTransform: 'none', px: 2.5, py: 1, borderRadius: 2, fontWeight: typography.fontWeightSemiBold }}
+            >
+              Add Product
+            </Button>
+          </Box>
         )}
       </Box>
 

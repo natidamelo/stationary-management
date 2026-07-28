@@ -342,4 +342,48 @@ export class ItemsService {
     }
     return { imported, errors };
   }
+
+  async fixLegacyBarcodes(tenantId: string) {
+    const cleanTenantId = (tenantId || '').trim();
+    const tid = toObjectId(cleanTenantId);
+    if (!tid && !cleanTenantId) return { updated: 0 };
+
+    const tenantFilter = tid 
+      ? { $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] }
+      : { tenantId: cleanTenantId };
+
+    const items = await this.model.find(tenantFilter).lean();
+    let nextNum = 10001;
+
+    // Find highest existing numeric SKU
+    for (const item of items) {
+      if (item.sku && /^\d+$/.test(item.sku)) {
+        const n = parseInt(item.sku, 10);
+        if (!isNaN(n) && n >= nextNum) nextNum = n + 1;
+      }
+    }
+
+    let updated = 0;
+    for (const item of items) {
+      const hasNonDigits = (str?: string) => str && /[^0-9]/.test(str);
+      const isLegacySku = hasNonDigits(item.sku);
+      const isLegacyBarcode = hasNonDigits(item.barcode);
+
+      if (isLegacySku || isLegacyBarcode) {
+        const newCode = String(nextNum++);
+        const updateData: any = {};
+        if (isLegacySku) {
+          updateData.sku = newCode;
+        }
+        if (!item.barcode || item.barcode === item.sku || isLegacyBarcode) {
+          updateData.barcode = newCode;
+        }
+
+        await this.model.updateOne({ _id: item._id }, { $set: updateData });
+        updated++;
+      }
+    }
+
+    return { updated };
+  }
 }

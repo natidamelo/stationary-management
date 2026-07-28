@@ -130,11 +130,11 @@ export default function StockManagement() {
       const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       JsBarcode(svgEl, barcode, {
         format: 'CODE128',
-        width: 2, 
-        height: 65, 
+        width: 2.5, 
+        height: 80, 
         displayValue: true,
         fontSize: 14,
-        margin: 10,
+        margin: 15,
         background: '#ffffff',
         lineColor: '#000000',
       });

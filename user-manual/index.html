@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stationery Management System — User Manual</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* =============================================
+           CSS VARIABLES & RESET
+           ============================================= */
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #818CF8;
+            --primary-bg: #EEF2FF;
+            --success: #10B981;
+            --success-bg: #D1FAE5;
+            --warning: #F59E0B;
+            --warning-bg: #FEF3C7;
+            --danger: #EF4444;
+            --danger-bg: #FEE2E2;
+            --info: #3B82F6;
+            --info-bg: #DBEAFE;
+            --purple: #8B5CF6;
+            --purple-bg: #EDE9FE;
+            --text: #1E293B;
+            --text-light: #64748B;
+            --border: #E2E8F0;
+            --bg: #FFFFFF;
+            --bg-alt: #F8FAFC;
+            --page-width: 210mm;
+        }
+
+        *, *::before, *::after {
+            margin: 0; padding: 0; box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text);
+            background: var(--bg-alt);
+            line-height: 1.6;
+            font-size: 11pt;
+        }
+
+        /* =============================================
+           PRINT STYLES
+           ============================================= */
+        @media print {
+            body { background: white; font-size: 10pt; }
+            .no-print { display: none !important; }
+            .page-break { page-break-before: always; }
+            .manual-container { max-width: 100%; padding: 0; margin: 0; box-shadow: none; }
+            section { page-break-inside: avoid; }
+            .step-card { break-inside: avoid; }
+            .toc { break-after: page; }
+            h2 { page-break-after: avoid; }
+        }
+
+        @page {
+            size: A4;
+            margin: 15mm 18mm;
+        }
+
+        /* =============================================
+           LAYOUT
+           ============================================= */
+        .manual-container {
+            max-width: var(--page-width);
+            margin: 20px auto;
+            background: var(--bg);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .manual-content {
+            padding: 40px 48px;
+        }
+
+        /* =============================================
+           COVER PAGE
+           ============================================= */
+        .cover {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%);
+            color: white;
+            padding: 80px 48px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .cover-icon {
+            font-size: 72px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .cover h1 {
+            font-size: 32pt;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .cover .subtitle {
+            font-size: 14pt;
+            opacity: 0.9;
+            font-weight: 400;
+            position: relative;
+        }
+
+        .cover .version {
+            margin-top: 32px;
+            font-size: 10pt;
+            opacity: 0.7;
+            position: relative;
+        }
+
+        /* =============================================
+           PRINT BUTTON
+           ============================================= */
+        .print-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: linear-gradient(135deg, #4F46E5, #7C3AED);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+        }
+
+        .print-bar span { font-weight: 600; font-size: 13pt; }
+
+        .btn-print {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 11pt;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-print:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        /* =============================================
+           TABLE OF CONTENTS
+           ============================================= */
+        .toc {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            margin: 32px 0;
+        }
+
+        .toc h2 {
+            font-size: 16pt;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 24px;
+        }
+
+        .toc-list li a {
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            font-size: 10pt;
+        }
+
+        .toc-list li a:hover {
+            background: var(--primary-bg);
+            color: var(--primary);
+        }
+
+        .toc-number {
+            background: var(--primary);
+            color: white;
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10pt;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* =============================================
+           SECTION HEADERS
+           ============================================= */
+        h2.section-title {
+            font-size: 18pt;
+            font-weight: 800;
+            margin: 48px 0 8px 0;
+            padding-bottom: 12px;
+            border-bottom: 3px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--primary);
+        }
+
+        h2.section-title .icon { font-size: 28px; }
+
+        h3.sub-title {
+            font-size: 13pt;
+            font-weight: 700;
+            margin: 28px 0 12px 0;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-intro {
+            color: var(--text-light);
+            margin-bottom: 20px;
+            font-size: 10.5pt;
+            line-height: 1.7;
+        }
+
+        /* =============================================
+           STEP CARDS
+           ============================================= */
+        .step-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            transition: box-shadow 0.2s;
+        }
+
+        .step-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 14pt;
+            flex-shrink: 0;
+        }
+
+        .step-number.green { background: var(--success); }
+        .step-number.orange { background: var(--warning); }
+        .step-number.red { background: var(--danger); }
+        .step-number.blue { background: var(--info); }
+        .step-number.purple { background: var(--purple); }
+
+        .step-content { flex: 1; }
+        .step-content h4 {
+            font-size: 11.5pt;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .step-content p {
+            color: var(--text-light);
+            font-size: 10pt;
+            line-height: 1.6;
+        }
+
+        /* =============================================
+           INFO BOXES
+           ============================================= */
+        .info-box {
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin: 16px 0;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 10pt;
+        }
+
+        .info-box .box-icon { font-size: 22px; flex-shrink: 0; }
+
+        .info-box.tip { background: var(--success-bg); border-left: 4px solid var(--success); }
+        .info-box.warning { background: var(--warning-bg); border-left: 4px solid var(--warning); }
+        .info-box.danger { background: var(--danger-bg); border-left: 4px solid var(--danger); }
+        .info-box.info { background: var(--info-bg); border-left: 4px solid var(--info); }
+        .info-box.note { background: var(--purple-bg); border-left: 4px solid var(--purple); }
+
+        /* =============================================
+           BUTTON ILLUSTRATIONS
+           ============================================= */
+        .btn-example {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 9.5pt;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .btn-example.primary { background: var(--primary); color: white; }
+        .btn-example.success { background: var(--success); color: white; }
+        .btn-example.danger { background: var(--danger); color: white; }
+        .btn-example.outline { background: white; color: var(--primary); border: 1.5px solid var(--primary); }
+        .btn-example.warning { background: var(--warning); color: white; }
+
+        /* =============================================
+           ROLE BADGES
+           ============================================= */
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 8.5pt;
+            font-weight: 600;
+        }
+
+        .role-badge.admin { background: #FEE2E2; color: #DC2626; }
+        .role-badge.manager { background: #DBEAFE; color: #2563EB; }
+        .role-badge.employee { background: #D1FAE5; color: #059669; }
+        .role-badge.clerk { background: #FEF3C7; color: #D97706; }
+        .role-badge.dealer { background: #EDE9FE; color: #7C3AED; }
+
+        /* =============================================
+           STATUS BADGES
+           ============================================= */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 8.5pt;
+            font-weight: 600;
+        }
+
+        .status-badge.green { background: var(--success-bg); color: #059669; }
+        .status-badge.yellow { background: var(--warning-bg); color: #D97706; }
+        .status-badge.red { background: var(--danger-bg); color: #DC2626; }
+        .status-badge.blue { background: var(--info-bg); color: #2563EB; }
+        .status-badge.gray { background: #F1F5F9; color: #64748B; }
+        .status-badge.purple { background: var(--purple-bg); color: #7C3AED; }
+
+        /* =============================================
+           WORKFLOW DIAGRAM
+           ============================================= */
+        .workflow {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .workflow-step {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            text-align: center;
+            min-width: 100px;
+            position: relative;
+        }
+
+        .workflow-step .wf-icon { font-size: 24px; display: block; margin-bottom: 4px; }
+        .workflow-step .wf-label { font-size: 8.5pt; font-weight: 600; color: var(--text); }
+
+        .workflow-step.active {
+            border-color: var(--primary);
+            background: var(--primary-bg);
+        }
+
+        .workflow-arrow {
+            font-size: 20px;
+            color: var(--primary);
+            margin: 0 4px;
+            font-weight: 700;
+        }
+
+        /* =============================================
+           FEATURE GRID
+           ============================================= */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .feature-card {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .feature-card .feat-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .feature-card h4 {
+            font-size: 10.5pt;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .feature-card p {
+            font-size: 9pt;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        /* =============================================
+           TABLES
+           ============================================= */
+        .manual-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 9.5pt;
+        }
+
+        .manual-table th {
+            background: var(--primary);
+            color: white;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .manual-table th:first-child { border-radius: 8px 0 0 0; }
+        .manual-table th:last-child { border-radius: 0 8px 0 0; }
+
+        .manual-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .manual-table tr:nth-child(even) { background: var(--bg-alt); }
+        .manual-table tr:hover { background: var(--primary-bg); }
+
+        /* =============================================
+           ICON KEY
+           ============================================= */
+        .icon-key {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .icon-key-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-alt);
+            border-radius: 8px;
+            font-size: 9.5pt;
+        }
+
+        .icon-key-item .ik-icon { font-size: 20px; }
+
+        /* =============================================
+           SIDEBAR PREVIEW
+           ============================================= */
+        .sidebar-preview {
+            background: #1E293B;
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            max-width: 260px;
+        }
+
+        .sidebar-preview .sp-brand {
+            font-weight: 700;
+            font-size: 12pt;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-preview .sp-section {
+            font-size: 7.5pt;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            margin: 12px 0 6px 0;
+            font-weight: 600;
+        }
+
+        .sidebar-preview .sp-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: 6px;
+            font-size: 9pt;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 2px;
+        }
+
+        .sidebar-preview .sp-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* =============================================
+           SHORTCUT KEYS
+           ============================================= */
+        kbd {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 9pt;
+            font-family: inherit;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* =============================================
+           DIVIDER
+           ============================================= */
+        hr.section-divider {
+            border: none;
+            border-top: 2px dashed var(--border);
+            margin: 32px 0;
+        }
+
+        /* =============================================
+           FOOTER
+           ============================================= */
+        .manual-footer {
+            background: var(--bg-alt);
+            border-top: 1px solid var(--border);
+            padding: 24px 48px;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 9pt;
+        }
+
+        .manual-footer .footer-brand {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 11pt;
+        }
+    </style>
+</head>
+<body>
+
+<!-- =============================================
+     PRINT BAR (hidden in print)
+     ============================================= -->
+<div class="print-bar no-print">
+    <span>📖 Stationery Management System — User Manual</span>
+    <button class="btn-print" onclick="window.print()">
+        📄 Download as PDF
+    </button>
+</div>
+
+<div class="manual-container">
+
+    <!-- =============================================
+         COVER PAGE
+         ============================================= -->
+    <div class="cover">
+        <div class="cover-icon">📦</div>
+        <h1>Stationery Management System</h1>
+        <p class="subtitle">Complete User Manual</p>
+        <p class="version">Version 1.0 &nbsp;·&nbsp; July 2026</p>
+    </div>
+
+    <div class="manual-content">
+
+        <!-- =============================================
+             ICON KEY LEGEND
+             ============================================= -->
+        <div class="toc" style="margin-top: 0;">
+            <h2>🔑 Icons Used in This Manual</h2>
+            <p style="color: var(--text-light); margin-bottom: 12px; font-size: 9.5pt;">Learn these icons to quickly understand instructions throughout the manual.</p>
+            <div class="icon-key">
+                <div class="icon-key-item"><span class="ik-icon">👆</span> Click / Tap here</div>
+                <div class="icon-key-item"><span class="ik-icon">✏️</span> Edit / Modify</div>
+                <div class="icon-key-item"><span class="ik-icon">🗑️</span> Delete / Remove</div>
+                <div class="icon-key-item"><span class="ik-icon">➕</span> Add / Create New</div>
+                <div class="icon-key-item"><span class="ik-icon">👁️</span> View Details</div>
+                <div class="icon-key-item"><span class="ik-icon">📷</span> Scan Barcode</div>
+                <div class="icon-key-item"><span class="ik-icon">💾</span> Save changes</div>
+                <div class="icon-key-item"><span class="ik-icon">🔍</span> Search / Filter</div>
+                <div class="icon-key-item"><span class="ik-icon">📤</span> Export / Download</div>
+                <div class="icon-key-item"><span class="ik-icon">🖨️</span> Print</div>
+                <div class="icon-key-item"><span class="ik-icon">✅</span> Approve / Confirm</div>
+                <div class="icon-key-item"><span class="ik-icon">❌</span> Reject / Cancel</div>
+                <div class="icon-key-item"><span class="ik-icon">📊</span> Reports / Charts</div>
+                <div class="icon-key-item"><span class="ik-icon">⚠️</span> Warning / Caution</div>
+                <div class="icon-key-item"><span class="ik-icon">💡</span> Helpful Tip</div>
+            </div>
+        </div>
+
+        <!-- =============================================
+             TABLE OF CONTENTS
+             ============================================= -->
+        <div class="toc">
+            <h2>📋 Table of Contents</h2>
+            <ol class="toc-list">
+                <li><a href="#getting-started"><span class="toc-number">1</span> Getting Started</a></li>
+                <li><a href="#dashboard"><span class="toc-number">2</span> Dashboard</a></li>
+                <li><a href="#products"><span class="toc-number">3</span> Products & Categories</a></li>
+                <li><a href="#stock"><span class="toc-number">4</span> Stock Management</a></li>
+                <li><a href="#procurement"><span class="toc-number">5</span> Procurement</a></li>
+                <li><a href="#distribution"><span class="toc-number">6</span> Distribution & Issues</a></li>
+                <li><a href="#stores"><span class="toc-number">7</span> Stores & Transfers</a></li>
+                <li><a href="#sales"><span class="toc-number">8</span> Sales (Point of Sale)</a></li>
+                <li><a href="#invoices"><span class="toc-number">9</span> Invoices</a></li>
+                <li><a href="#reports"><span class="toc-number">10</span> Reports</a></li>
+                <li><a href="#customers"><span class="toc-number">11</span> Customers & Suppliers</a></li>
+                <li><a href="#users"><span class="toc-number">12</span> Users & Roles</a></li>
+                <li><a href="#messages"><span class="toc-number">13</span> Messages</a></li>
+                <li><a href="#settings"><span class="toc-number">14</span> Settings</a></li>
+                <li><a href="#troubleshooting"><span class="toc-number">15</span> Troubleshooting</a></li>
+            </ol>
+        </div>
+
+        <!-- =============================================================
+             SECTION 1: GETTING STARTED
+             ============================================================= -->
+        <section id="getting-started">
+            <h2 class="section-title"><span class="icon">🚀</span> 1. Getting Started</h2>
+            <p class="section-intro">Welcome! This section shows you how to log in, create an account, and navigate the system.</p>
+
+            <h3 class="sub-title">🔐 How to Log In</h3>
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Open the System</h4>
+                    <p>Open your web browser (Chrome, Edge, Firefox) and go to the system address provided by your administrator.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Enter Your Email ✉️</h4>
+                    <p>Type your email address in the <strong>Email</strong> field.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Enter Your Password 🔑</h4>
+                    <p>Type your password. 👆 Click the <strong>eye icon</strong> 👁️ to show/hide your password.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">4</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">Sign In</span></h4>
+                    <p>You will be taken to your Dashboard. If you see an error, check your email and password.</p>
+                </div>
+            </div>
+
+            <div class="info-box tip">
+                <span class="box-icon">💡</span>
+                <div><strong>First time?</strong> Ask your administrator for your login email and password. You can also 👆 click <strong>"Register here"</strong> to create a new account with your business name.</div>
+            </div>
+
+            <h3 class="sub-title">📝 How to Register (New Account)</h3>
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>👆 Click "Register here" on the login page</h4>
+                    <p>This takes you to the registration form.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Fill in Your Information</h4>
+                    <p>Enter your <strong>Full Name</strong>, <strong>Company/Shop Name</strong>, <strong>Email</strong>, and <strong>Password</strong> (minimum 6 characters).</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">3</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">Register Now</span></h4>
+                    <p>Your account will be created. You will be redirected to the login page.</p>
+                </div>
+            </div>
+
+            <h3 class="sub-title">🧭 Navigating the System</h3>
+            <p class="section-intro">The system has a <strong>sidebar menu</strong> on the left side with all sections organized into groups:</p>
+
+            <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+                <div class="sidebar-preview">
+                    <div class="sp-brand">✨ Your Shop Name</div>
+                    <div class="sp-item active">📊 Dashboard</div>
+                    <div class="sp-section">Master Registries</div>
+                    <div class="sp-item">🏷️ Categories</div>
+                    <div class="sp-item">🏢 Stores</div>
+                    <div class="sp-item">🚚 Suppliers</div>
+                    <div class="sp-item">📦 Products</div>
+                    <div class="sp-item">👥 Customers</div>
+                    <div class="sp-section">Transactions & Sales</div>
+                    <div class="sp-item">📋 Requisitions</div>
+                    <div class="sp-item">🛒 Orders</div>
+                    <div class="sp-item">📥 Goods Receiving</div>
+                    <div class="sp-item">📤 Item Issues</div>
+                    <div class="sp-item">↔️ Store Transfers</div>
+                    <div class="sp-item">🧾 Sales</div>
+                    <div class="sp-section">Admin & Reports</div>
+                    <div class="sp-item">👤 Users</div>
+                    <div class="sp-item">💬 Messages</div>
+                    <div class="sp-item">📊 Reports</div>
+                </div>
+                <div style="flex: 1; min-width: 240px;">
+                    <div class="info-box info">
+                        <span class="box-icon">ℹ️</span>
+                        <div><strong>Top Bar Features:</strong><br>
+                            🔍 <strong>Search</strong> — find anything quickly<br>
+                            🏢 <strong>Store Switcher</strong> — change active store<br>
+                            🌙 <strong>Theme Toggle</strong> — dark/light mode<br>
+                            🔔 <strong>Notifications</strong> — view alerts<br>
+                            ⚙️ <strong>Settings</strong> — configure system<br>
+                            🚪 <strong>Logout</strong> — sign out
+                        </div>
+                    </div>
+
+                    <div class="info-box note">
+                        <span class="box-icon">🔒</span>
+                        <div><strong>Some menu items are role-restricted:</strong><br>
+                            <span class="role-badge admin">Admin</span> <span class="role-badge manager">Manager</span> — Users, Stores, Reports<br>
+                            <span class="role-badge dealer">Dealer</span> — Tenants, Licenses
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 2: DASHBOARD
+             ============================================================= -->
+        <section id="dashboard">
+            <h2 class="section-title"><span class="icon">📊</span> 2. Dashboard</h2>
+            <p class="section-intro">The Dashboard is your home page. It gives you a quick overview of your business at a glance.</p>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feat-icon">⏳</span>
+                    <div>
+                        <h4>Pending Approvals</h4>
+                        <p>Number of purchase requests waiting for approval.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">🛒</span>
+                    <div>
+                        <h4>Completed Sales Today</h4>
+                        <p>How many sales you completed today.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">⚠️</span>
+                    <div>
+                        <h4>Low Stock Items</h4>
+                        <p>Items that are running low and need reordering.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">💰</span>
+                    <div>
+                        <h4>Today's Revenue</h4>
+                        <p>Total money earned from today's sales.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="sub-title">📈 Sales Chart</h3>
+            <p class="section-intro">The chart shows your revenue over time. 👆 Click the period buttons to change the view:</p>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <span class="btn-example outline">Day</span>
+                <span class="btn-example outline">Week</span>
+                <span class="btn-example primary">Month</span>
+                <span class="btn-example outline">Year</span>
+            </div>
+
+            <h3 class="sub-title">⚡ Quick Actions</h3>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+                <span class="btn-example primary">➕ Add New Item</span>
+                <span class="btn-example outline">🏷️ Categories</span>
+                <span class="btn-example outline">📦 Inventory</span>
+                <span class="btn-example outline">📊 View Reports</span>
+            </div>
+
+            <div class="info-box tip">
+                <span class="box-icon">💡</span>
+                <div>The <strong>Low Stock Alerts</strong> section at the bottom shows items below their reorder level. 👆 Click <strong>"View all"</strong> to see the full inventory page.</div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 3: PRODUCTS & CATEGORIES
+             ============================================================= -->
+        <section id="products">
+            <h2 class="section-title"><span class="icon">📦</span> 3. Products & Categories</h2>
+            <p class="section-intro">Manage all your stationery products and organize them into categories.</p>
+
+            <h3 class="sub-title">🏷️ Categories</h3>
+            <p class="section-intro">Categories help you group similar products together (e.g., "Pens", "Paper", "Notebooks").</p>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 🏷️ Categories from the sidebar menu</h4>
+                    <p>You will see a list of all your categories.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">2</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ Add Category</span></h4>
+                    <p>A form will appear. Enter the <strong>Name</strong> and <strong>Description</strong>. Then 👆 click <span class="btn-example primary">💾 Save</span>.</p>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin: 12px 0;">
+                <span class="btn-example outline">✏️ Edit</span> — Change category details &nbsp;&nbsp;
+            </div>
+
+            <hr class="section-divider">
+
+            <h3 class="sub-title">📦 Products (Items)</h3>
+            <p class="section-intro">This is where you manage all your products/items in the system.</p>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 📦 Products from the sidebar menu</h4>
+                    <p>You will see a table of all products with their details.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">2</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ Add Product</span> to add a new item</h4>
+                    <p>Fill in the product details form (see the fields below).</p>
+                </div>
+            </div>
+
+            <h3 class="sub-title">📝 Product Form Fields</h3>
+            <table class="manual-table">
+                <thead>
+                    <tr><th>Field</th><th>What to Enter</th><th>Required?</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>📋 Product Name</td><td>Name of the item (e.g., "Blue Pen")</td><td>✅ Yes</td></tr>
+                    <tr><td>🔖 SKU</td><td>Auto-generated unique code</td><td>✅ Auto</td></tr>
+                    <tr><td>🏷️ Category</td><td>Select from dropdown (or ➕ create new)</td><td>✅ Yes</td></tr>
+                    <tr><td>📐 Unit</td><td>Piece, Box, Pack, Ream, Set, Dozen, etc.</td><td>✅ Yes</td></tr>
+                    <tr><td>📊 Initial Stock</td><td>Starting quantity</td><td>✅ Yes</td></tr>
+                    <tr><td>⚠️ Min Stock Level</td><td>Alert when stock falls below this</td><td>✅ Yes</td></tr>
+                    <tr><td>📈 Max Stock Level</td><td>Target reorder quantity</td><td>Optional</td></tr>
+                    <tr><td>💰 Cost Price</td><td>How much you pay (ETB)</td><td>✅ Yes</td></tr>
+                    <tr><td>💵 Selling Price</td><td>How much you charge (ETB)</td><td>✅ Yes</td></tr>
+                    <tr><td>📷 Barcode</td><td>Type or scan barcode number</td><td>Optional</td></tr>
+                    <tr><td>🖼️ Image</td><td>Upload a product photo</td><td>Optional</td></tr>
+                    <tr><td>📝 Description</td><td>Additional details about the product</td><td>Optional</td></tr>
+                </tbody>
+            </table>
+
+            <h3 class="sub-title">📷 Barcode Scanning</h3>
+            <div class="step-card">
+                <div class="step-number blue">📷</div>
+                <div class="step-content">
+                    <h4>Scan with Camera</h4>
+                    <p>👆 Click the <span class="btn-example outline">📷 Scan</span> button to open your camera. Point at a barcode — the system will read it automatically.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number blue">🔌</div>
+                <div class="step-content">
+                    <h4>Scan with USB Scanner</h4>
+                    <p>Simply scan the barcode with your USB scanner. The system automatically detects the barcode and finds the matching product.</p>
+                </div>
+            </div>
+
+            <div class="info-box tip">
+                <span class="box-icon">💡</span>
+                <div><strong>Bulk Import:</strong> 👆 Click the <strong>CSV Import</strong> button to upload many products at once from a spreadsheet file.</div>
+            </div>
+
+            <h3 class="sub-title">🖨️ Print Barcodes</h3>
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>👆 Click the 🖨️ printer icon on any product row</h4>
+                    <p>A dialog will ask how many labels to print (default: 20).</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">2</div>
+                <div class="step-content">
+                    <h4>👆 Click Print — barcode labels will be generated in A4 format</h4>
+                    <p>A print window will open. Select your printer and print.</p>
+                </div>
+            </div>
+
+            <div class="info-box info">
+                <span class="box-icon">ℹ️</span>
+                <div><strong>Product Actions:</strong>
+                    <span class="btn-example outline" style="margin: 2px 4px;">👁️ View</span>
+                    <span class="btn-example outline" style="margin: 2px 4px;">✏️ Edit</span>
+                    <span class="btn-example outline" style="margin: 2px 4px;">🔧 Adjust Stock</span>
+                    <span class="btn-example danger" style="margin: 2px 4px;">🗑️ Delete</span>
+                    (Admin only)
+                </div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 4: STOCK MANAGEMENT
+             ============================================= -->
+        <section id="stock">
+            <h2 class="section-title"><span class="icon">📊</span> 4. Stock Management</h2>
+            <p class="section-intro">Track stock levels, make adjustments, and view movement history.</p>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feat-icon">📦</span>
+                    <div>
+                        <h4>Total Items</h4>
+                        <p>All products in inventory.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">⚠️</span>
+                    <div>
+                        <h4>Low Stock</h4>
+                        <p>Items below minimum level.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">📤</span>
+                    <div>
+                        <h4>Recent Distributions</h4>
+                        <p>Recently issued items.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">📋</span>
+                    <div>
+                        <h4>Stock Movements</h4>
+                        <p>All ins and outs recorded.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="sub-title">📊 Stock Overview Tab</h3>
+            <p class="section-intro">View all your stock grouped by category. Items with low stock show a <span class="status-badge yellow">⚠️ Low Stock</span> warning badge.</p>
+
+            <h3 class="sub-title">🔧 How to Adjust Stock</h3>
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example outline">🔧 Stock Adjustment</span></h4>
+                    <p>A form will open.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Select the Item and Enter Quantity</h4>
+                    <p>Choose the item from the dropdown. Enter a <strong>positive number</strong> to add stock, or a <strong>negative number</strong> to remove stock. Add a reason in the Notes field.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">3</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">Apply</span></h4>
+                    <p>The stock will be updated and recorded in the movement history.</p>
+                </div>
+            </div>
+
+            <div class="info-box warning">
+                <span class="box-icon">⚠️</span>
+                <div><strong>Stock Adjustment</strong> is only available for: <span class="role-badge admin">Admin</span> <span class="role-badge manager">Manager</span> <span class="role-badge clerk">Inventory Clerk</span></div>
+            </div>
+
+            <h3 class="sub-title">📜 Stock Status Colors</h3>
+            <table class="manual-table">
+                <thead><tr><th>Status</th><th>Color</th><th>Meaning</th></tr></thead>
+                <tbody>
+                    <tr><td><span class="status-badge green">✅ In Stock</span></td><td>Green</td><td>Quantity is above minimum level</td></tr>
+                    <tr><td><span class="status-badge yellow">⚠️ Low Stock</span></td><td>Yellow</td><td>Quantity is below minimum — reorder soon!</td></tr>
+                    <tr><td><span class="status-badge red">❌ Out of Stock</span></td><td>Red</td><td>Quantity is zero — order immediately!</td></tr>
+                </tbody>
+            </table>
+
+            <h3 class="sub-title">📋 Tabs Available</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feat-icon">📊</span>
+                    <div><h4>Stock Overview</h4><p>All items grouped by category.</p></div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">📜</span>
+                    <div><h4>Movement History</h4><p>Recent 50 stock movements log.</p></div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">🔄</span>
+                    <div><h4>Reorder Suggestions</h4><p>Items that need restocking.</p></div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">📅</span>
+                    <div><h4>Expiry Tracking</h4><p>Track product expiration dates.</p></div>
+                </div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 5: PROCUREMENT
+             ============================================= -->
+        <section id="procurement">
+            <h2 class="section-title"><span class="icon">🛒</span> 5. Procurement (Purchasing)</h2>
+            <p class="section-intro">The procurement workflow helps you request, approve, order, and receive goods from suppliers.</p>
+
+            <h3 class="sub-title">🔄 Procurement Workflow</h3>
+            <div class="workflow">
+                <div class="workflow-step">
+                    <span class="wf-icon">📋</span>
+                    <span class="wf-label">Create<br>Requisition</span>
+                </div>
+                <span class="workflow-arrow">→</span>
+                <div class="workflow-step">
+                    <span class="wf-icon">✅</span>
+                    <span class="wf-label">Approve<br>Request</span>
+                </div>
+                <span class="workflow-arrow">→</span>
+                <div class="workflow-step">
+                    <span class="wf-icon">🛒</span>
+                    <span class="wf-label">Create<br>Order</span>
+                </div>
+                <span class="workflow-arrow">→</span>
+                <div class="workflow-step">
+                    <span class="wf-icon">📧</span>
+                    <span class="wf-label">Send to<br>Supplier</span>
+                </div>
+                <span class="workflow-arrow">→</span>
+                <div class="workflow-step active">
+                    <span class="wf-icon">📥</span>
+                    <span class="wf-label">Receive<br>Goods</span>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <h3 class="sub-title">📋 Purchase Requisitions</h3>
+            <p class="section-intro">A requisition is a <strong>request</strong> to buy items. It must be approved before becoming an order.</p>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 📋 Requisitions from the sidebar</h4>
+                    <p>You will see all existing purchase requests.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ New Requisition</span></h4>
+                    <p>Select the <strong>Store</strong>, add <strong>Purpose/Notes</strong>, then add items.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Add Items to Your Request</h4>
+                    <p>Select products from the dropdown, set quantities. You can also 📷 <strong>scan barcodes</strong> to add items quickly. 👆 Click <strong>➕ Add Line</strong> for more items.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">4</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">Submit Requisition</span></h4>
+                    <p>Your request will be sent for approval.</p>
+                </div>
+            </div>
+
+            <h3 class="sub-title">✅ Approving Requisitions</h3>
+            <div class="info-box note">
+                <span class="box-icon">🔒</span>
+                <div>Only <span class="role-badge admin">Admin</span> and <span class="role-badge manager">Manager</span> can approve or reject requisitions.</div>
+            </div>
+            <div style="display: flex; gap: 8px; margin: 12px 0;">
+                <span class="btn-example success">✅ Approve</span>
+                <span class="btn-example danger">❌ Reject</span>
+                <span style="color: var(--text-light); font-size: 9.5pt; align-self: center;">— choose one for each pending request</span>
+            </div>
+
+            <h3 class="sub-title">📜 Requisition Status Guide</h3>
+            <table class="manual-table">
+                <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+                <tbody>
+                    <tr><td><span class="status-badge gray">📝 Draft</span></td><td>Not yet submitted</td></tr>
+                    <tr><td><span class="status-badge yellow">⏳ Pending</span></td><td>Waiting for approval</td></tr>
+                    <tr><td><span class="status-badge green">✅ Approved</span></td><td>Approved — ready to order</td></tr>
+                    <tr><td><span class="status-badge red">❌ Rejected</span></td><td>Not approved (with reason)</td></tr>
+                </tbody>
+            </table>
+
+            <hr class="section-divider">
+
+            <h3 class="sub-title">🛒 Purchase Orders</h3>
+            <p class="section-intro">Orders are sent to suppliers to buy products.</p>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 🛒 Orders from the sidebar</h4>
+                    <p>View all purchase orders and sales in one place.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ Create New Order</span></h4>
+                    <p>Select the <strong>Supplier</strong>, set <strong>Expected Delivery Date</strong>, and add items with quantities and unit prices.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>➕ Add Items to the Order</h4>
+                    <p>For each item, select the product, enter quantity and unit price. The total is calculated automatically. 👆 Click <strong>➕ Add Item</strong> for more lines.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">4</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">Submit</span></h4>
+                    <p>Then use <span class="btn-example outline">📧 Send</span> to send it to the supplier.</p>
+                </div>
+            </div>
+
+            <h3 class="sub-title">📜 Order Actions</h3>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0;">
+                <span class="btn-example outline">👁️ View Details</span>
+                <span class="btn-example outline">📧 Send</span>
+                <span class="btn-example outline">📥 Receive</span>
+                <span class="btn-example outline">🔒 Close</span>
+            </div>
+
+            <hr class="section-divider">
+
+            <h3 class="sub-title">📥 Goods Receiving</h3>
+            <p class="section-intro">When goods arrive from a supplier, record what you received here.</p>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 📥 Goods Receiving from the sidebar</h4>
+                    <p>You will see a history of all received goods.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">📥 Log Received Goods</span></h4>
+                    <p>Select the <strong>Purchase Order</strong> from the dropdown (only undelivered orders appear).</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Enter Received Quantities</h4>
+                    <p>For each item in the order, enter how many you actually received. You can receive partially — the system tracks this.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">4</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">Fulfill & Receive Stock</span></h4>
+                    <p>Stock levels will be automatically updated! ✅</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 6: DISTRIBUTION & ISSUES
+             ============================================= -->
+        <section id="distribution">
+            <h2 class="section-title"><span class="icon">📤</span> 6. Distribution & Item Issues</h2>
+            <p class="section-intro">Track when items are issued to departments, stores, or individuals.</p>
+
+            <h3 class="sub-title">📤 Item Issues (to Stores)</h3>
+            <p class="section-intro">Issue items from your main inventory to specific stores.</p>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 📤 Item Issues from the sidebar</h4>
+                    <p>View all past issue records.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">📤 Issue Items</span></h4>
+                    <p>Select the <strong>Destination Store</strong> from the dropdown.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Add Items</h4>
+                    <p>Search and select products (shows available stock), enter quantities. Add issuance notes. 👆 Click <strong>➕ Add Item</strong> for more.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">4</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">Issue Items</span></h4>
+                    <p>Items will be transferred and stock updated.</p>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <h3 class="sub-title">📋 Distribution (to Departments/People)</h3>
+            <p class="section-intro">Issue items to specific users and departments within your organization.</p>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">📋 Issue Items</span></h4>
+                    <p>Select the <strong>user</strong> receiving the items, enter the <strong>department</strong>, and add any notes.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Add Line Items</h4>
+                    <p>Select items and quantities. 👆 Click <strong>➕ Line</strong> to add more items.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">3</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">Issue</span></h4>
+                    <p>The distribution is recorded and stock is deducted.</p>
+                </div>
+            </div>
+
+            <div class="info-box warning">
+                <span class="box-icon">⚠️</span>
+                <div>Distribution is only available for: <span class="role-badge admin">Admin</span> <span class="role-badge manager">Manager</span> <span class="role-badge clerk">Inventory Clerk</span></div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 7: STORES & TRANSFERS
+             ============================================= -->
+        <section id="stores">
+            <h2 class="section-title"><span class="icon">🏢</span> 7. Stores & Transfers</h2>
+            <p class="section-intro">Manage multiple store locations and transfer stock between them.</p>
+
+            <h3 class="sub-title">🏢 Managing Stores</h3>
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 🏢 Stores from the sidebar (Admin only)</h4>
+                    <p>See all registered store locations.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">2</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ Add Store</span></h4>
+                    <p>Enter <strong>Store Name</strong> and <strong>Location</strong>. 👆 Click <span class="btn-example primary">💾 Save</span>.</p>
+                </div>
+            </div>
+
+            <div class="info-box info">
+                <span class="box-icon">ℹ️</span>
+                <div>Each store shows its status: <span class="status-badge green">✅ Active</span> or <span class="status-badge red">❌ Inactive</span>. You can toggle status when editing.</div>
+            </div>
+
+            <hr class="section-divider">
+
+            <h3 class="sub-title">↔️ Store Transfers</h3>
+            <p class="section-intro">Move stock from one store to another.</p>
+
+            <div class="workflow">
+                <div class="workflow-step">
+                    <span class="wf-icon">📝</span>
+                    <span class="wf-label">Create<br>Transfer</span>
+                </div>
+                <span class="workflow-arrow">→</span>
+                <div class="workflow-step">
+                    <span class="wf-icon">⏳</span>
+                    <span class="wf-label">Pending<br>Approval</span>
+                </div>
+                <span class="workflow-arrow">→</span>
+                <div class="workflow-step active">
+                    <span class="wf-icon">✅</span>
+                    <span class="wf-label">Approved<br>& Complete</span>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to ↔️ Store Transfers from the sidebar</h4>
+                    <p>View transfer history.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ New Store Transfer</span></h4>
+                    <p>Select <strong>Source Store</strong> (where from) and <strong>Destination Store</strong> (where to).</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Add Products to Transfer</h4>
+                    <p>Search and select items, set quantities. Add transfer notes/reason.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">4</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">Complete Store Transfer</span></h4>
+                    <p>Transfer is created as <span class="status-badge yellow">⏳ Pending</span>. Admin/Manager must approve to finalize.</p>
+                </div>
+            </div>
+
+            <div class="info-box note">
+                <span class="box-icon">🔒</span>
+                <div>Only <span class="role-badge admin">Admin</span> and <span class="role-badge manager">Manager</span> can <strong>Approve & Complete</strong> transfers. Stock is moved only after approval.</div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 8: SALES (POS)
+             ============================================= -->
+        <section id="sales">
+            <h2 class="section-title"><span class="icon">🧾</span> 8. Sales (Point of Sale)</h2>
+            <p class="section-intro">The Sales page is your cash register. Create sales, scan items, and process payments.</p>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feat-icon">💰</span>
+                    <div><h4>Today's Revenue</h4><p>Total earnings for today.</p></div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">🧾</span>
+                    <div><h4>Transaction Count</h4><p>Number of sales today.</p></div>
+                </div>
+            </div>
+
+            <h3 class="sub-title">🛒 How to Make a Sale</h3>
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 🧾 Sales from the sidebar</h4>
+                    <p>The sale creation form appears at the top.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Add Items to the Sale</h4>
+                    <p>You have 3 ways to add items:</p>
+                    <p>📷 <strong>Camera Scan</strong> — click the scan button<br>
+                    🔌 <strong>USB Scanner</strong> — just scan, auto-detects<br>
+                    🔍 <strong>Search</strong> — type item name to find and select</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Set Quantities and Review</h4>
+                    <p>Adjust quantities for each item. You can also add <strong>Services</strong> (toggle between Item/Service for each line).</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>Enter Payment Details</h4>
+                    <p>Enter <strong>Customer Name</strong>, select <strong>Payment Method</strong> (Cash, etc.), and enter <strong>Amount Paid</strong>.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">5</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example success">Complete Sale</span></h4>
+                    <p>The sale is recorded and stock is automatically deducted. ✅</p>
+                </div>
+            </div>
+
+            <div class="info-box tip">
+                <span class="box-icon">💡</span>
+                <div><strong>Unpaid Sales:</strong> If a customer pays partially, the sale appears in the <strong>"Unpaid Sales"</strong> section below. 👆 Click <strong>Pay Balance</strong> to record additional payments later.</div>
+            </div>
+
+            <div class="info-box tip">
+                <span class="box-icon">💡</span>
+                <div><strong>Scanning tip:</strong> If you scan a barcode for an item already in the cart, the system automatically <strong>increases the quantity</strong> instead of adding a duplicate.</div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 9: INVOICES
+             ============================================= -->
+        <section id="invoices">
+            <h2 class="section-title"><span class="icon">🧾</span> 9. Invoices</h2>
+            <p class="section-intro">Create professional invoices from your sales and send them to customers.</p>
+
+            <h3 class="sub-title">📄 How to Create an Invoice</h3>
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ Create from Sale</span></h4>
+                    <p>Select one of today's sales from the dropdown.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">2</div>
+                <div class="step-content">
+                    <h4>Invoice is Generated Automatically</h4>
+                    <p>The invoice includes your company branding, customer details, all items, and totals.</p>
+                </div>
+            </div>
+
+            <h3 class="sub-title">📜 Invoice Actions</h3>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0;">
+                <span class="btn-example outline">👁️ View Invoice</span>
+                <span class="btn-example outline">🖨️ Print</span>
+                <span class="btn-example primary">📄 Download PDF</span>
+            </div>
+
+            <div class="info-box info">
+                <span class="box-icon">ℹ️</span>
+                <div><strong>PDF Invoices</strong> include your company name/logo, invoice number, customer details, itemized list, totals, and a <span class="status-badge green">PAID</span> watermark for paid invoices.</div>
+            </div>
+
+            <h3 class="sub-title">📜 Invoice Status</h3>
+            <table class="manual-table">
+                <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+                <tbody>
+                    <tr><td><span class="status-badge gray">📝 Draft</span></td><td>Invoice created but not sent</td></tr>
+                    <tr><td><span class="status-badge blue">📧 Sent</span></td><td>Sent to customer</td></tr>
+                    <tr><td><span class="status-badge green">✅ Paid</span></td><td>Customer has paid</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 10: REPORTS
+             ============================================= -->
+        <section id="reports">
+            <h2 class="section-title"><span class="icon">📊</span> 10. Reports</h2>
+            <p class="section-intro">Access comprehensive reports about your business performance, sales, stock, and finances.</p>
+
+            <h3 class="sub-title">📑 Report Tabs</h3>
+            <table class="manual-table">
+                <thead><tr><th>Tab</th><th>What It Shows</th></tr></thead>
+                <tbody>
+                    <tr><td>📊 <strong>Business Overview</strong></td><td>Total items, categories, suppliers, users, sales in last 30 days</td></tr>
+                    <tr><td>🛒 <strong>Sales Report</strong></td><td>Detailed sales table with customer, payment method, totals, expandable line items</td></tr>
+                    <tr><td>💰 <strong>Financial Report</strong></td><td>Revenue, costs, gross profit, margins, operating expenses</td></tr>
+                    <tr><td>🔧 <strong>Service Analytics</strong></td><td>Distribution stats, department breakdown, top items issued</td></tr>
+                    <tr><td>📦 <strong>Stock Movement</strong></td><td>All stock in/out activity with quantities</td></tr>
+                    <tr><td>📋 <strong>Inventory Reports</strong></td><td>Full inventory value, low stock items list</td></tr>
+                </tbody>
+            </table>
+
+            <h3 class="sub-title">🔍 Filtering Reports</h3>
+            <p class="section-intro">Use the period buttons to change the time range:</p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;">
+                <span class="btn-example outline">Daily</span>
+                <span class="btn-example outline">Weekly</span>
+                <span class="btn-example outline">Bi-Weekly</span>
+                <span class="btn-example primary">Monthly</span>
+                <span class="btn-example outline">Quarterly</span>
+                <span class="btn-example outline">Yearly</span>
+            </div>
+
+            <h3 class="sub-title">📤 Exporting Reports</h3>
+            <div class="step-card">
+                <div class="step-number blue">📤</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">📤 Export CSV</span> or <span class="btn-example primary">📄 Export PDF</span></h4>
+                    <p>The report data will be downloaded to your computer as a spreadsheet (CSV) or PDF file.</p>
+                </div>
+            </div>
+
+            <div class="info-box warning">
+                <span class="box-icon">⚠️</span>
+                <div>Some report tabs are only available for <span class="role-badge admin">Admin</span> and <span class="role-badge manager">Manager</span> roles.</div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 11: CUSTOMERS & SUPPLIERS
+             ============================================= -->
+        <section id="customers">
+            <h2 class="section-title"><span class="icon">👥</span> 11. Customers & Suppliers</h2>
+
+            <h3 class="sub-title">👥 Customers</h3>
+            <p class="section-intro">Manage your customer database for invoicing and sales tracking.</p>
+
+            <div class="step-card">
+                <div class="step-number green">➕</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ Add Customer</span></h4>
+                    <p>Fill in: <strong>Name</strong> (required), <strong>Email</strong> (required), <strong>Contact</strong>, <strong>Address</strong>, and <strong>Notes</strong>. 👆 Click <span class="btn-example primary">💾 Save</span>.</p>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <h3 class="sub-title">🚚 Suppliers</h3>
+            <p class="section-intro">Manage your supplier/vendor contacts for purchase orders.</p>
+
+            <div class="step-card">
+                <div class="step-number green">➕</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ Add Supplier</span></h4>
+                    <p>Fill in: <strong>Name</strong>, <strong>Contact Person</strong>, <strong>Email</strong>, <strong>Phone</strong>, <strong>Address</strong>. 👆 Click <span class="btn-example primary">💾 Save</span>.</p>
+                </div>
+            </div>
+
+            <div class="info-box info">
+                <span class="box-icon">ℹ️</span>
+                <div>Suppliers you add here will appear in the dropdown when creating <strong>Purchase Orders</strong>.</div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 12: USERS & ROLES
+             ============================================= -->
+        <section id="users">
+            <h2 class="section-title"><span class="icon">👤</span> 12. Users & Roles</h2>
+            <p class="section-intro">Manage who can access the system and what they can do.</p>
+
+            <div class="info-box warning">
+                <span class="box-icon">🔒</span>
+                <div>User management is only available for <span class="role-badge admin">Admin</span> users.</div>
+            </div>
+
+            <h3 class="sub-title">👤 Adding a User</h3>
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 👤 Users from the sidebar</h4>
+                    <p>See all system users and their roles.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">2</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">➕ Add User</span></h4>
+                    <p>Fill in <strong>Full Name</strong>, <strong>Email</strong>, <strong>Password</strong> (min 6 chars), <strong>Department</strong>, <strong>Role</strong>, and <strong>Assigned Store</strong>.</p>
+                </div>
+            </div>
+
+            <h3 class="sub-title">🎭 User Roles Explained</h3>
+            <table class="manual-table">
+                <thead><tr><th>Role</th><th>What They Can Do</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td><span class="role-badge admin">👑 Admin</span></td>
+                        <td>Full access to everything — manage users, stores, settings, delete items, view all reports, approve requests</td>
+                    </tr>
+                    <tr>
+                        <td><span class="role-badge manager">📋 Manager</span></td>
+                        <td>Manage inventory, approve purchase requests and transfers, view reports, manage users</td>
+                    </tr>
+                    <tr>
+                        <td><span class="role-badge employee">👤 Employee</span></td>
+                        <td>View products, create purchase requests, make sales, view own data</td>
+                    </tr>
+                    <tr>
+                        <td><span class="role-badge clerk">📦 Inventory Clerk</span></td>
+                        <td>Manage stock, adjust quantities, issue items, add products and categories</td>
+                    </tr>
+                    <tr>
+                        <td><span class="role-badge" style="background: #FEF3C7; color: #92400E;">🧾 Reception</span></td>
+                        <td>Process sales at the point of sale, manage the register</td>
+                    </tr>
+                    <tr>
+                        <td><span class="role-badge dealer">🏢 Dealer</span></td>
+                        <td>Manage tenants, licenses, and system-wide configuration</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 class="sub-title">👤 User Actions</h3>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0;">
+                <span class="btn-example outline">✏️ Edit</span>
+                <span class="btn-example outline">🔑 Change Password</span>
+                <span class="btn-example warning">🚫 Block/Unblock</span>
+                <span class="btn-example danger">🗑️ Delete</span>
+            </div>
+
+            <div class="info-box tip">
+                <span class="box-icon">💡</span>
+                <div><strong>Block vs Delete:</strong> Blocking a user prevents them from logging in but keeps their data. Deleting removes them permanently.</div>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 13: MESSAGES
+             ============================================= -->
+        <section id="messages">
+            <h2 class="section-title"><span class="icon">💬</span> 13. Messages</h2>
+            <p class="section-intro">Send messages to other users in the system for communication and alerts.</p>
+
+            <h3 class="sub-title">📨 Sending a Message</h3>
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Go to 💬 Messages from the sidebar</h4>
+                    <p>View all your messages and conversations.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Choose Message Type</h4>
+                    <p><strong>📢 Broadcast</strong> — send to all users<br>
+                    <strong>👤 Individual</strong> — send to one specific person</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Write or Use a Template</h4>
+                    <p>Type your message, or use a <strong>Quick Template</strong>:</p>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                        <span class="btn-example outline">📢 Announcement</span>
+                        <span class="btn-example outline">⚠️ Stock Alert</span>
+                        <span class="btn-example outline">🚨 Urgent Request</span>
+                        <span class="btn-example outline">❓ Quick Inquiry</span>
+                    </div>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-number green">4</div>
+                <div class="step-content">
+                    <h4>👆 Click <span class="btn-example primary">📨 Send</span></h4>
+                    <p>Your message will be delivered instantly.</p>
+                </div>
+            </div>
+
+            <h3 class="sub-title">📬 Message Filters</h3>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0;">
+                <span class="btn-example primary">All</span>
+                <span class="btn-example outline">📢 Broadcast</span>
+                <span class="btn-example outline">👤 Direct</span>
+                <span class="btn-example outline">📤 Sent</span>
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- =============================================================
+             SECTION 14: SETTINGS
+             ============================================= -->
+        <section id="settings">
+            <h2 class="section-title"><span class="icon">⚙️</span> 14. Settings</h2>
+            <p class="section-intro">Configure your system preferences and business details.</p>
+
+            <div class="step-card">
+                <div class="step-number">⚙️</div>
+                <div class="step-content">
+                    <h4>👆 Click the ⚙️ Settings button in the sidebar</h4>
+                    <p>A settings dialog will open where you can configure:</p>
+                </div>
+            </div>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feat-icon">🏢</span>
+                    <div><h4>Company Name</h4><p>Your business/shop name shown on invoices and reports.</p></div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">🖼️</span>
+                    <div><h4>Company Logo</h4><p>Upload your logo for branded invoices.</p></div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">🌙</span>
+                    <div><h4>Theme</h4><p>Switch between light and dark mode.</p></div>
+                </div>
+                <div class="feature-card">
+                    <span class="feat-icon">🔧</span>
+                    <div><h4>Module Access</h4><p>Enable or disable menu items per role.</p></div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="section-divider">
+
+        <!-- =============================================================
+             SECTION 15: TROUBLESHOOTING
+             ============================================= -->
+        <section id="troubleshooting">
+            <h2 class="section-title"><span class="icon">🔧</span> 15. Troubleshooting</h2>
+            <p class="section-intro">Common issues and their solutions.</p>
+
+            <table class="manual-table">
+                <thead><tr><th>❓ Problem</th><th>✅ Solution</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td>Can't log in</td>
+                        <td>Check your email and password. Make sure Caps Lock is off. Ask Admin to check if your account is blocked.</td>
+                    </tr>
+                    <tr>
+                        <td>Can't see a menu item</td>
+                        <td>Your role may not have access. Ask your Admin to enable the module for your role in Settings.</td>
+                    </tr>
+                    <tr>
+                        <td>Barcode scanner not working</td>
+                        <td>📷 <strong>Camera:</strong> Allow browser to access camera when prompted. Try Chrome browser.<br>🔌 <strong>USB:</strong> Make sure scanner is plugged in. Click inside any input field first, then scan.</td>
+                    </tr>
+                    <tr>
+                        <td>Can't add/edit items</td>
+                        <td>You may not have the right role. Only Admin, Manager, and Inventory Clerk can modify products.</td>
+                    </tr>
+                    <tr>
+                        <td>Stock numbers seem wrong</td>
+                        <td>Check the Stock Movement History tab to see all changes. An Admin can make a stock adjustment to correct quantities.</td>
+                    </tr>
+                    <tr>
+                        <td>PDF/Invoice not downloading</td>
+                        <td>Disable pop-up blockers in your browser. Try a different browser (Chrome recommended).</td>
+                    </tr>
+                    <tr>
+                        <td>Page loading slowly</td>
+                        <td>Check your internet connection. 👆 Click the 🔄 Refresh button. Try clearing your browser cache.</td>
+                    </tr>
+                    <tr>
+                        <td>Forgot password</td>
+                        <td>Ask your Admin to reset your password via the Users page (🔑 Change Password action).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-box tip">
+                <span class="box-icon">💡</span>
+                <div><strong>Need more help?</strong> Contact your system administrator or the dealer who set up your system.</div>
+            </div>
+
+            <h3 class="sub-title">🛡️ Audit Logs</h3>
+            <p class="section-intro">Admins can view all system activity in the <strong>Audit Logs</strong> page — every action (create, update, delete, login) is recorded with timestamp, user, and details.</p>
+        </section>
+
+    </div><!-- end .manual-content -->
+
+    <!-- =============================================
+         FOOTER
+         ============================================= -->
+    <div class="manual-footer">
+        <p class="footer-brand">📦 Stationery Management System</p>
+        <p style="margin-top: 4px;">User Manual v1.0 &nbsp;·&nbsp; July 2026</p>
+        <p style="margin-top: 8px;">For support, contact your system administrator.</p>
+    </div>
+
+</div><!-- end .manual-container -->
+
+</body>
+</html>

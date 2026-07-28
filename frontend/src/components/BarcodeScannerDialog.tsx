@@ -58,22 +58,38 @@ export default function BarcodeScannerDialog({ open, onClose, onScan }: BarcodeS
           Html5QrcodeSupportedFormats.UPC_E,
           Html5QrcodeSupportedFormats.CODE_39,
           Html5QrcodeSupportedFormats.CODE_93,
+          Html5QrcodeSupportedFormats.ITF,
+          Html5QrcodeSupportedFormats.CODABAR,
         ];
 
-        // Ensure we don't use useBarCodeDetectorIfSupported because it hangs on Chrome desktop
-        const scanner = new Html5Qrcode("reader-container", { formatsToSupport: formats, verbose: false });
+        // Explicitly disable native BarcodeDetector API — it causes
+        // "Cannot read properties of undefined (reading 'length')" on
+        // Chrome desktop when scanning CODE128 barcodes.
+        const scanner = new Html5Qrcode("reader-container", {
+          formatsToSupport: formats,
+          verbose: false,
+          useBarCodeDetectorIfSupported: false,
+        });
         scannerRef.current = scanner;
 
         const config = {
-          fps: 15,
-          // Scanning full frame without limiting to a qrbox or specific aspect ratio solves most
-          // small barcode alignment issues while remaining compatible with all devices.
+          fps: 20,
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            // Use a wide, short box optimised for 1-D barcodes
+            const width  = Math.floor(viewfinderWidth * 0.85);
+            const height = Math.floor(viewfinderHeight * 0.35);
+            return { width: Math.max(width, 200), height: Math.max(height, 80) };
+          },
+          aspectRatio: 1.0,
         };
 
         const handleSuccess = (decodedText: string) => {
-          if (scanHandled) return;
+          // Guard against undefined/empty values from the decoder
+          if (!decodedText || scanHandled) return;
+          const trimmed = decodedText.trim();
+          if (!trimmed) return;
           scanHandled = true; // Prevent rapid duplicate fires
-          onScan(decodedText);
+          onScan(trimmed);
         };
 
         const handleError = () => {

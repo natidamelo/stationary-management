@@ -145,10 +145,10 @@ export default function Items() {
     if (selectedStore) params.set('storeId', selectedStore);
 
     return Promise.all([
-      api.get<Item[]>(`/items?${params.toString()}`).then((r) => setItems(r.data)),
-      api.get<Array<{ id: string; name: string }>>('/categories').then((r) => setCategories(r.data)),
-      api.get<Store[]>('/stores').then((r) => setStores(r.data)),
-      api.get<Supplier[]>('/suppliers').then((r) => setSuppliers(r.data)),
+      api.get<Item[]>(`/items?${params.toString()}`).then((r) => setItems(r.data)).catch(() => setItems([])),
+      api.get<Array<{ id: string; name: string }>>('/categories').then((r) => setCategories(r.data)).catch(() => setCategories([])),
+      api.get<Store[]>('/stores').then((r) => setStores(r.data)).catch(() => setStores([])),
+      api.get<Supplier[]>('/suppliers').then((r) => setSuppliers(r.data)).catch(() => setSuppliers([])),
     ]);
   };
 
@@ -390,11 +390,11 @@ export default function Items() {
       const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       JsBarcode(svgEl, barcode, {
         format: 'CODE128',
-        width: 2,
-        height: 65,
+        width: 2.5,
+        height: 80,
         displayValue: true,
         fontSize: 14,
-        margin: 10,
+        margin: 15,
         background: '#ffffff',
         lineColor: '#000000',
       });

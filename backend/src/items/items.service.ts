@@ -8,6 +8,17 @@ import { toObjectId } from '../common/utils';
 import { InventoryService } from '../inventory/inventory.service';
 import { StockMovementType } from '../common/enums';
 
+function generateValidEAN13(seq: number): string {
+  const base12 = '200' + String(seq).padStart(9, '0');
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    const digit = parseInt(base12[i], 10);
+    sum += (i % 2 === 0) ? digit : digit * 3;
+  }
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return base12 + checkDigit;
+}
+
 @Injectable()
 export class ItemsService {
   constructor(
@@ -54,17 +65,6 @@ export class ItemsService {
       tags: o.tags ?? [],
     };
   }
-
-function generateValidEAN13(seq: number): string {
-  const base12 = '200' + String(seq).padStart(9, '0');
-  let sum = 0;
-  for (let i = 0; i < 12; i++) {
-    const digit = parseInt(base12[i], 10);
-    sum += (i % 2 === 0) ? digit : digit * 3;
-  }
-  const checkDigit = (10 - (sum % 10)) % 10;
-  return base12 + checkDigit;
-}
 
   async generateNextSku(tenantId: string): Promise<string> {
     const tid = toObjectId(tenantId);

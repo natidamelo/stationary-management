@@ -403,11 +403,11 @@ export default function Items() {
       const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       JsBarcode(svgEl, barcode, {
         format: 'CODE128',
-        width: 3,
-        height: 100,
+        width: 2,
+        height: 60,
         displayValue: true,
-        fontSize: 18,
-        margin: 15,
+        fontSize: 14,
+        margin: 8,
         background: '#ffffff',
         lineColor: '#000000',
       });
@@ -438,12 +438,12 @@ export default function Items() {
               }
               * { box-sizing: border-box; }
               body { font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 4mm; }
-              .grid { display: flex; flex-wrap: wrap; gap: 2mm; justify-content: flex-start; }
-              .label { width: 95mm; height: auto; min-height: 45mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3mm; border: 0.5mm solid #000; page-break-inside: avoid; background: #fff; }
-              .item-name { font-size: 10pt; font-weight: bold; line-height: 1.2; max-width: 90mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 1mm; text-align: center; }
-              .item-sku { font-size: 8pt; color: #333; margin-bottom: 1mm; text-align: center; }
+              .grid { display: flex; flex-wrap: wrap; gap: 3mm; justify-content: flex-start; }
+              .label { width: 60mm; height: auto; min-height: 32mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; border: 0.3mm solid #ccc; page-break-inside: avoid; background: #fff; border-radius: 2mm; }
+              .item-name { font-size: 9pt; font-weight: bold; line-height: 1.2; max-width: 56mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 1mm; text-align: center; }
+              .item-sku { font-size: 7.5pt; color: #555; margin-bottom: 1mm; text-align: center; }
               .barcode-svg { display: flex; justify-content: center; width: 100%; }
-              .barcode-svg svg { width: 88mm; height: auto; display: block; shape-rendering: crispEdges; }
+              .barcode-svg svg { width: 52mm; height: auto; display: block; shape-rendering: crispEdges; }
               .barcode-svg rect { shape-rendering: crispEdges; }
             </style>
           </head>

@@ -132,10 +132,10 @@ export default function StockManagement() {
       try {
         JsBarcode(svgEl, barcode, {
           format: isEAN13 ? 'EAN13' : 'CODE128',
-          width: isEAN13 ? 2 : 2.5, 
-          height: 75, 
+          width: 3, 
+          height: 100, 
           displayValue: true,
-          fontSize: 14,
+          fontSize: 18,
           margin: 10,
           background: '#ffffff',
           lineColor: '#000000',
@@ -143,10 +143,10 @@ export default function StockManagement() {
       } catch (err) {
         JsBarcode(svgEl, barcode, {
           format: 'CODE128',
-          width: 2.5, 
-          height: 75, 
+          width: 3, 
+          height: 100, 
           displayValue: true,
-          fontSize: 14,
+          fontSize: 18,
           margin: 10,
           background: '#ffffff',
           lineColor: '#000000',
@@ -157,10 +157,9 @@ export default function StockManagement() {
 
       const labelHtml = `
         <div class="barcode-container">
-          <div style="font-weight: bold; margin-bottom: 3px; font-size: 10px; text-align: center;">${item.name}</div>
+          <div style="font-weight: bold; margin-bottom: 3px; font-size: 11px; text-align: center;">${item.name}</div>
           <div style="font-size: 9px; margin-bottom: 3px; text-align: center; color: #444;">SKU: ${item.sku}</div>
-          <div style="max-width: 95%; max-height: 25mm; display: flex; justify-content: center; margin: 0 auto;">${svgString}</div>
-          <div class="item-info" style="font-size: 8px; text-align: center; margin-top: 3px;">Barcode: ${barcode}</div>
+          <div class="barcode-wrap">${svgString}</div>
         </div>`;
 
       const labelsHtml = Array(count).fill(labelHtml).join('');
@@ -189,13 +188,13 @@ export default function StockManagement() {
               }
               body {
                 font-family: Arial, sans-serif;
-                padding: 10mm;
+                padding: 4mm;
                 background: #fff;
               }
               .grid {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 5mm;
+                gap: 2mm;
                 justify-content: flex-start;
               }
               .barcode-container {
@@ -203,21 +202,25 @@ export default function StockManagement() {
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                width: 75mm;
-                height: 40mm;
+                width: 95mm;
+                height: 50mm;
                 padding: 3mm;
                 border: 0.5mm solid #000;
                 page-break-inside: avoid;
                 text-align: center;
+                overflow: hidden;
               }
-              .item-info {
-                margin-top: 5px;
-                font-size: 8px;
-                font-family: monospace;
+              .barcode-wrap {
+                display: flex;
+                justify-content: center;
               }
-              img, svg, rect {
-                image-rendering: -webkit-optimize-contrast;
-                image-rendering: pixelated;
+              .barcode-wrap svg {
+                height: 35mm;
+                width: auto;
+                display: block;
+                shape-rendering: crispEdges;
+              }
+              .barcode-wrap rect {
                 shape-rendering: crispEdges;
               }
             </style>

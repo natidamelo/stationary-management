@@ -405,10 +405,10 @@ export default function Items() {
       try {
         JsBarcode(svgEl, barcode, {
           format: isEAN13 ? 'EAN13' : 'CODE128',
-          width: isEAN13 ? 2 : 2.5,
-          height: 75,
+          width: 3,
+          height: 100,
           displayValue: true,
-          fontSize: 14,
+          fontSize: 18,
           margin: 10,
           background: '#ffffff',
           lineColor: '#000000',
@@ -416,10 +416,10 @@ export default function Items() {
       } catch (err) {
         JsBarcode(svgEl, barcode, {
           format: 'CODE128',
-          width: 2.5,
-          height: 75,
+          width: 3,
+          height: 100,
           displayValue: true,
-          fontSize: 14,
+          fontSize: 18,
           margin: 10,
           background: '#ffffff',
           lineColor: '#000000',
@@ -453,11 +453,11 @@ export default function Items() {
               * { box-sizing: border-box; }
               body { font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 4mm; }
               .grid { display: flex; flex-wrap: wrap; gap: 2mm; justify-content: flex-start; }
-              .label { width: 75mm; height: 40mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3mm; border: 0.5mm solid #000; page-break-inside: avoid; overflow: hidden; background: #fff; }
-              .item-name { font-size: 10pt; font-weight: bold; line-height: 1.2; max-width: 70mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 1.5mm; text-align: center; }
-              .item-sku { font-size: 8pt; color: #333; margin-bottom: 1.5mm; text-align: center; }
-              .barcode-svg { max-width: 95%; max-height: 25mm; display: flex; justify-content: center; }
-              .barcode-svg svg { width: 100%; height: auto; display: block; shape-rendering: crispEdges; }
+              .label { width: 95mm; height: 50mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3mm; border: 0.5mm solid #000; page-break-inside: avoid; overflow: hidden; background: #fff; }
+              .item-name { font-size: 11pt; font-weight: bold; line-height: 1.2; max-width: 90mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 1mm; text-align: center; }
+              .item-sku { font-size: 9pt; color: #333; margin-bottom: 1mm; text-align: center; }
+              .barcode-svg { display: flex; justify-content: center; }
+              .barcode-svg svg { height: 35mm; width: auto; display: block; shape-rendering: crispEdges; }
               .barcode-svg rect { shape-rendering: crispEdges; }
             </style>
           </head>

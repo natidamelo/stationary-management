@@ -19,6 +19,17 @@ function generateValidEAN13(seq: number): string {
   return base12 + checkDigit;
 }
 
+function isValidEAN13(str?: string): boolean {
+  if (!str || !/^\d{13}$/.test(str)) return false;
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    const digit = parseInt(str[i], 10);
+    sum += (i % 2 === 0) ? digit : digit * 3;
+  }
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return parseInt(str[12], 10) === checkDigit;
+}
+
 @Injectable()
 export class ItemsService {
   constructor(
@@ -378,18 +389,17 @@ export class ItemsService {
 
     let updated = 0;
     for (const item of items) {
-      const isNot13DigitNumber = (str?: string) => !str || !/^\d{13}$/.test(str);
-      const isLegacySku = isNot13DigitNumber(item.sku);
-      const isLegacyBarcode = isNot13DigitNumber(item.barcode);
+      const isInvalidSku = !isValidEAN13(item.sku);
+      const isInvalidBarcode = !isValidEAN13(item.barcode);
 
-      if (isLegacySku || isLegacyBarcode) {
+      if (isInvalidSku || isInvalidBarcode) {
         maxSeq++;
         const newCode = generateValidEAN13(maxSeq);
         const updateData: any = {};
-        if (isLegacySku) {
+        if (isInvalidSku) {
           updateData.sku = newCode;
         }
-        if (!item.barcode || item.barcode === item.sku || isLegacyBarcode) {
+        if (!item.barcode || item.barcode === item.sku || isInvalidBarcode) {
           updateData.barcode = newCode;
         }
 

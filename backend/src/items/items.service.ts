@@ -57,18 +57,21 @@ export class ItemsService {
 
   async generateNextSku(tenantId: string): Promise<string> {
     const tid = toObjectId(tenantId);
-    if (!tid) return '10001';
+    const startNum = 2000000000001; // 13-digit standard retail format
+    if (!tid) return String(startNum);
     
-    // Find the highest existing numeric SKU for this tenant
+    // Find the highest existing 13-digit numeric SKU for this tenant
     const docs = await this.model.find({ tenantId: tid })
       .select('sku')
       .lean();
     
-    let maxNum = 10000; // Start from 10001
+    let maxNum = startNum - 1;
     for (const doc of docs) {
-      const num = parseInt(doc.sku, 10);
-      if (!isNaN(num) && num > maxNum) {
-        maxNum = num;
+      if (doc.sku && /^\d{13}$/.test(doc.sku)) {
+        const num = parseInt(doc.sku, 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
       }
     }
     
@@ -353,11 +356,12 @@ export class ItemsService {
       : { tenantId: cleanTenantId };
 
     const items = await this.model.find(tenantFilter).lean();
-    let nextNum = 10001;
+    const startNum = 2000000000001;
+    let nextNum = startNum;
 
-    // Find highest existing numeric SKU
+    // Find highest existing 13-digit numeric SKU
     for (const item of items) {
-      if (item.sku && /^\d+$/.test(item.sku)) {
+      if (item.sku && /^\d{13}$/.test(item.sku)) {
         const n = parseInt(item.sku, 10);
         if (!isNaN(n) && n >= nextNum) nextNum = n + 1;
       }
@@ -365,9 +369,9 @@ export class ItemsService {
 
     let updated = 0;
     for (const item of items) {
-      const hasNonDigits = (str?: string) => str && /[^0-9]/.test(str);
-      const isLegacySku = hasNonDigits(item.sku);
-      const isLegacyBarcode = hasNonDigits(item.barcode);
+      const isNot13DigitNumber = (str?: string) => !str || !/^\d{13}$/.test(str);
+      const isLegacySku = isNot13DigitNumber(item.sku);
+      const isLegacyBarcode = isNot13DigitNumber(item.barcode);
 
       if (isLegacySku || isLegacyBarcode) {
         const newCode = String(nextNum++);

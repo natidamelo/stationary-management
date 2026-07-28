@@ -189,20 +189,21 @@ export default function StockManagement() {
                 align-items: center;
                 justify-content: center;
                 width: 95mm;
-                height: 50mm;
+                height: auto;
+                min-height: 45mm;
                 padding: 3mm;
                 border: 0.5mm solid #000;
                 page-break-inside: avoid;
                 text-align: center;
-                overflow: hidden;
               }
               .barcode-wrap {
                 display: flex;
                 justify-content: center;
+                width: 100%;
               }
               .barcode-wrap svg {
-                height: 35mm;
-                width: auto;
+                width: 88mm;
+                height: auto;
                 display: block;
                 shape-rendering: crispEdges;
               }

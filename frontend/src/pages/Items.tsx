@@ -400,15 +400,15 @@ export default function Items() {
     }
 
     try {
-      // Use SVG for crisp vector rendering at native printer DPI
+      const isEAN13 = /^\d{13}$/.test(barcode);
       const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       JsBarcode(svgEl, barcode, {
-        format: 'CODE128',
-        width: 2.5,
-        height: 80,
+        format: isEAN13 ? 'EAN13' : 'CODE128',
+        width: isEAN13 ? 2 : 2.5,
+        height: 75,
         displayValue: true,
         fontSize: 14,
-        margin: 15,
+        margin: 10,
         background: '#ffffff',
         lineColor: '#000000',
       });

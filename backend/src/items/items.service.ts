@@ -55,27 +55,37 @@ export class ItemsService {
     };
   }
 
+function generateValidEAN13(seq: number): string {
+  const base12 = '200' + String(seq).padStart(9, '0');
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    const digit = parseInt(base12[i], 10);
+    sum += (i % 2 === 0) ? digit : digit * 3;
+  }
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return base12 + checkDigit;
+}
+
   async generateNextSku(tenantId: string): Promise<string> {
     const tid = toObjectId(tenantId);
-    const startNum = 2000000000001; // 13-digit standard retail format
-    if (!tid) return String(startNum);
+    if (!tid) return generateValidEAN13(1);
     
-    // Find the highest existing 13-digit numeric SKU for this tenant
+    // Find the highest existing 13-digit EAN-13 numeric SKU for this tenant
     const docs = await this.model.find({ tenantId: tid })
       .select('sku')
       .lean();
     
-    let maxNum = startNum - 1;
+    let maxSeq = 0;
     for (const doc of docs) {
-      if (doc.sku && /^\d{13}$/.test(doc.sku)) {
-        const num = parseInt(doc.sku, 10);
-        if (!isNaN(num) && num > maxNum) {
-          maxNum = num;
+      if (doc.sku && /^\d{13}$/.test(doc.sku) && doc.sku.startsWith('200')) {
+        const seq = parseInt(doc.sku.slice(3, 12), 10);
+        if (!isNaN(seq) && seq > maxSeq) {
+          maxSeq = seq;
         }
       }
     }
     
-    return String(maxNum + 1);
+    return generateValidEAN13(maxSeq + 1);
   }
 
   async create(dto: CreateItemDto, user: { id: string; tenantId: string; storeId?: string }) {
@@ -356,14 +366,13 @@ export class ItemsService {
       : { tenantId: cleanTenantId };
 
     const items = await this.model.find(tenantFilter).lean();
-    const startNum = 2000000000001;
-    let nextNum = startNum;
+    let maxSeq = 0;
 
-    // Find highest existing 13-digit numeric SKU
+    // Find highest existing 13-digit EAN-13 sequence
     for (const item of items) {
-      if (item.sku && /^\d{13}$/.test(item.sku)) {
-        const n = parseInt(item.sku, 10);
-        if (!isNaN(n) && n >= nextNum) nextNum = n + 1;
+      if (item.sku && /^\d{13}$/.test(item.sku) && item.sku.startsWith('200')) {
+        const seq = parseInt(item.sku.slice(3, 12), 10);
+        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
       }
     }
 
@@ -374,7 +383,8 @@ export class ItemsService {
       const isLegacyBarcode = isNot13DigitNumber(item.barcode);
 
       if (isLegacySku || isLegacyBarcode) {
-        const newCode = String(nextNum++);
+        maxSeq++;
+        const newCode = generateValidEAN13(maxSeq);
         const updateData: any = {};
         if (isLegacySku) {
           updateData.sku = newCode;

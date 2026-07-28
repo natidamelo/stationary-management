@@ -250,18 +250,21 @@ export class ItemsService {
     const escapedBarcode = cleanBarcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const barcodeRegex = new RegExp(`^${escapedBarcode}$`, 'i');
 
-    const tenantFilter = tid 
-      ? { $or: [{ tenantId: tid }, { tenantId: cleanTenantId }] }
-      : { tenantId: cleanTenantId };
+    const tenantConditions = tid 
+      ? [{ tenantId: tid }, { tenantId: cleanTenantId }] 
+      : [{ tenantId: cleanTenantId }];
 
-    // Try finding by barcode or SKU (exact match or case-insensitive)
+    const barcodeConditions = [
+      { barcode: cleanBarcode }, 
+      { sku: cleanBarcode }, 
+      { barcode: barcodeRegex }, 
+      { sku: barcodeRegex }
+    ];
+
     let doc = await this.model.findOne({ 
-      ...tenantFilter,
-      $or: [
-        { barcode: cleanBarcode }, 
-        { sku: cleanBarcode }, 
-        { barcode: barcodeRegex }, 
-        { sku: barcodeRegex }
+      $and: [
+        { $or: tenantConditions },
+        { $or: barcodeConditions }
       ]
     }).populate('categoryId').lean();
 

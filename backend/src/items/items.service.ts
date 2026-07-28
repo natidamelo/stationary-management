@@ -9,7 +9,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { StockMovementType } from '../common/enums';
 
 function generateValidEAN13(seq: number): string {
-  const base12 = '200' + String(seq).padStart(9, '0');
+  const base12 = '871' + String(1000000 + seq).slice(1) + String(seq % 1000).padStart(3, '0');
   let sum = 0;
   for (let i = 0; i < 12; i++) {
     const digit = parseInt(base12[i], 10);
@@ -88,7 +88,7 @@ export class ItemsService {
     
     let maxSeq = 0;
     for (const doc of docs) {
-      if (doc.sku && /^\d{13}$/.test(doc.sku) && doc.sku.startsWith('200')) {
+      if (doc.sku && /^\d{13}$/.test(doc.sku) && (doc.sku.startsWith('871') || doc.sku.startsWith('200'))) {
         const seq = parseInt(doc.sku.slice(3, 12), 10);
         if (!isNaN(seq) && seq > maxSeq) {
           maxSeq = seq;
@@ -384,7 +384,7 @@ export class ItemsService {
 
     // Find highest existing 13-digit EAN-13 sequence
     for (const item of items) {
-      if (item.sku && /^\d{13}$/.test(item.sku) && item.sku.startsWith('200')) {
+      if (item.sku && /^\d{13}$/.test(item.sku) && (item.sku.startsWith('871') || item.sku.startsWith('200'))) {
         const seq = parseInt(item.sku.slice(3, 12), 10);
         if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
       }

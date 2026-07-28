@@ -32,6 +32,7 @@ import {
   Chip,
   Fade,
   Tooltip,
+  Snackbar,
 } from '@mui/material';
 import { 
   QrCodeScanner as QrCodeScannerIcon,
@@ -108,6 +109,7 @@ export default function Reception() {
   const navigate = useNavigate();
   const [barcodeInput, setBarcodeInput] = useState('');
   const [scanningBarcode, setScanningBarcode] = useState(false);
+  const [scanToast, setScanToast] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
 
 
   const load = () => {
@@ -198,14 +200,29 @@ export default function Reception() {
         });
 
         setBarcodeInput('');
+        setScanToast({
+          open: true,
+          message: `Added: "${item.name}" (${price} Birr)`,
+          severity: 'success',
+        });
         setTimeout(() => barcodeInputRef.current?.focus(), 100);
       } else {
         setSellError(`Item with barcode "${clean}" not found.`);
+        setScanToast({
+          open: true,
+          message: `Barcode "${clean}" not found. Create item in Products first.`,
+          severity: 'error',
+        });
         setTimeout(() => setSellError(''), 3000);
       }
     } catch (err: unknown) {
       const res = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setSellError(res || `Item with barcode "${clean}" not found.`);
+      setScanToast({
+        open: true,
+        message: res || `Barcode "${clean}" not found. Create item in Products first.`,
+        severity: 'error',
+      });
       setTimeout(() => setSellError(''), 3000);
     } finally {
       setScanningBarcode(false);
@@ -961,6 +978,17 @@ export default function Reception() {
           </CardContent>
         </Card>
       )}
+
+      <Snackbar
+        open={scanToast.open}
+        autoHideDuration={4000}
+        onClose={() => setScanToast((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={scanToast.severity} variant="filled" sx={{ width: '100%', borderRadius: 3, fontWeight: 600 }}>
+          {scanToast.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

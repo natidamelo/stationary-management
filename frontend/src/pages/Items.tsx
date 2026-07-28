@@ -444,7 +444,7 @@ export default function Items() {
               .item-name { font-size: 10pt; font-weight: bold; line-height: 1.2; max-width: 70mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 1.5mm; text-align: center; }
               .item-sku { font-size: 8pt; color: #333; margin-bottom: 1.5mm; text-align: center; }
               .barcode-svg { max-width: 95%; max-height: 25mm; display: flex; justify-content: center; }
-              .barcode-svg svg { width: 100%; height: auto; display: block; }
+              .barcode-svg svg, .barcode-svg rect { width: 100%; height: auto; display: block; shape-rendering: crispEdges; }
             </style>
           </head>
           <body><div class="grid">${labelsHtml}</div><script>window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };</script></body>

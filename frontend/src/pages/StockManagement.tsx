@@ -201,9 +201,10 @@ export default function StockManagement() {
                 font-size: 8px;
                 font-family: monospace;
               }
-              img {
-                image-rendering: -webkit-optimize-contrast; /* Sharper on some browsers */
-                image-rendering: pixelated; /* Sharpest for barcodes */
+              img, svg, rect {
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: pixelated;
+                shape-rendering: crispEdges;
               }
             </style>
           </head>

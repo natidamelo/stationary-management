@@ -401,17 +401,41 @@ export default function Items() {
 
     try {
       const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      JsBarcode(svgEl, barcode, {
-        format: 'CODE128',
-        width: 2,
-        height: 55,
-        displayValue: true,
-        fontOptions: 'bold',
-        fontSize: 16,
-        margin: 6,
-        background: '#ffffff',
-        lineColor: '#000000',
-      });
+      const is13Digits = /^\d{13}$/.test(barcode);
+      let renderSuccess = false;
+
+      if (is13Digits) {
+        try {
+          JsBarcode(svgEl, barcode, {
+            format: 'EAN13',
+            width: 1.5,
+            height: 42,
+            displayValue: true,
+            fontOptions: 'bold',
+            fontSize: 14,
+            margin: 5,
+            background: '#ffffff',
+            lineColor: '#000000',
+          });
+          renderSuccess = true;
+        } catch (e) {
+          console.warn('EAN13 format fallback to CODE128', e);
+        }
+      }
+
+      if (!renderSuccess) {
+        JsBarcode(svgEl, barcode, {
+          format: 'CODE128',
+          width: 1.5,
+          height: 42,
+          displayValue: true,
+          fontOptions: 'bold',
+          fontSize: 14,
+          margin: 5,
+          background: '#ffffff',
+          lineColor: '#000000',
+        });
+      }
 
       const svgString = new XMLSerializer().serializeToString(svgEl);
 
@@ -434,18 +458,18 @@ export default function Items() {
             <title>Barcode - ${item.name}</title>
             <style>
               @media print {
-                @page { margin: 5mm; size: A4 portrait; }
+                @page { margin: 4mm; size: A4 portrait; }
                 body { margin: 0; padding: 0; }
               }
               * { box-sizing: border-box; }
               body { font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 4mm; }
-              .grid { display: flex; flex-wrap: wrap; gap: 3mm; justify-content: flex-start; }
-              .label { width: 60mm; height: auto; min-height: 34mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; border: 0.3mm solid #000; page-break-inside: avoid; background: #fff; border-radius: 2mm; }
-              .item-name { font-size: 10pt; font-weight: 800; color: #000; line-height: 1.2; max-width: 56mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 1mm; text-align: center; }
-              .item-sku { font-size: 9pt; font-weight: 700; color: #000; margin-bottom: 1mm; text-align: center; }
+              .grid { display: flex; flex-wrap: wrap; gap: 2.5mm; justify-content: flex-start; }
+              .label { width: 48mm; height: auto; min-height: 28mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5mm; border: 0.3mm solid #000; page-break-inside: avoid; background: #fff; border-radius: 1.5mm; }
+              .item-name { font-size: 8.5pt; font-weight: 800; color: #000; line-height: 1.15; max-width: 44mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 0.5mm; text-align: center; }
+              .item-sku { font-size: 7.5pt; font-weight: 700; color: #000; margin-bottom: 0.5mm; text-align: center; }
               .barcode-svg { display: flex; justify-content: center; width: 100%; }
-              .barcode-svg svg { width: 54mm; height: auto; display: block; shape-rendering: crispEdges; }
-              .barcode-svg svg text { font-weight: 800 !important; fill: #000000 !important; font-size: 15px !important; }
+              .barcode-svg svg { width: 42mm; height: auto; display: block; shape-rendering: crispEdges; }
+              .barcode-svg svg text { font-weight: 800 !important; fill: #000000 !important; font-size: 13px !important; }
               .barcode-svg rect { shape-rendering: crispEdges; }
             </style>
           </head>
